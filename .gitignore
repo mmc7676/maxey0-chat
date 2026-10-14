@@ -1,0 +1,14 @@
+node_modules/
+build/
+*.cjs
+.wrangler/
+wrangler.toml
+.dev.vars
+.env
+.env.*
+!.env.example
+.maxey0/
+tests/out/
+*.png
+!plugins/maxey0/assets/logo.png
+*.log

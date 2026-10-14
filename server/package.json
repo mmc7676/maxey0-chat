@@ -1,0 +1,20 @@
+{
+  "name": "maxey0-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Optional Maxey0 remote MCP server: server-held SCWs with tool-layer scope enforcement and an MCP Apps dashboard (Cloudflare Worker).",
+  "type": "module",
+  "scripts": {
+    "build:test": "esbuild test/entry.ts --bundle --format=esm --platform=node --outfile=build/node.mjs --log-level=warning",
+    "test": "npm run build:test && node --test test/server.test.mjs",
+    "typecheck": "tsc -p tsconfig.json",
+    "dev:node": "npm run build:test && node dev-node.mjs",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4",
+    "esbuild": "^0.25",
+    "typescript": "^5",
+    "wrangler": "^4"
+  }
+}
