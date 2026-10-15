@@ -1,0 +1,22 @@
+# Changelog
+
+## 2.0.0 (2026-10-14)
+
+### Plugin `maxey0` 2.0.0
+- The dashboard now renders inline in the chat through Claude's built-in renderer. The plugin no longer requires the Maxey0 connector, so it works in chat on web, desktop and mobile without a server or sign-in.
+- Dashboard: SCWs, agents and loops, gates, five typed memory tiers with per-SCW tier access, scope ledger, plan runner. Edits are staged in the dashboard and sent back with `Maxey0: apply`.
+- State is one JSON object (`maxey0.state/2`) carried in the conversation; `Maxey0: save` writes it to `.maxey0/state.json` (Claude Code) or the Project doc `maxey0/state.json` (claude.ai Projects with the Projects tool).
+- Terminal fallback: `standalone-shell.html` wraps the same widget as a local page.
+- Memory model corrected to five typed tiers (working, episodic, semantic, persistent, procedural) with an evidence-gated promotion gate. No L1-L4 levels.
+- When the optional server's `maxey0_*` tools are present, the skills use them.
+- Tests: 9 headless-browser tests at 380 px, light and dark, including input validation, command payloads and an injection check.
+
+### Server `maxey0-mcp` 1.0.0 (recovered)
+- `server/src` recovered byte-for-byte from the deployed Worker's source map (`sourcesContent`). `src/ui-html.ts` is the generated dashboard bundle; the dashboard's UI source and the original 47-test suite were not in the deployed bundle and are not included.
+- Added `package.json`, `tsconfig.json`, `wrangler.toml.example`, a Node dev host and 5 regression tests (protocol, auth, app-only tool, scope enforcement, explicit errors).
+
+### App `scw-privacy-chatgpt` 3.2 (2026-10-12)
+- Included unchanged (SHA-256 `7cae76d5…`) with its test scripts. Its README describes 3.1; the 3.2 changes are the labels that follow ChatGPT's own names, quick setup, and the embedded Maxey0 logo.
+
+## 1.0.2 (2026-10-14)
+- Plugin with `maxey0` and `scw` skills that required the Maxey0 connector, plus the remote server. The connector could not be added in the Claude app (sign-in registration error).

@@ -1,0 +1,58 @@
+<style>
+#m0{font-size:14px;color:var(--text-primary);padding:.5rem 0}
+#m0 .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#m0 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#m0 .met{background:var(--surface-1);border-radius:var(--radius);padding:.75rem 1rem}
+#m0 .met b{display:block;font-size:22px;font-weight:500}
+#m0 .card{background:var(--surface-2);border:.5px solid var(--border);border-radius:12px;padding:.75rem 1rem;margin:8px 0}
+#m0 .chip{font-size:12px;padding:2px 8px;border-radius:var(--radius);background:var(--surface-1);color:var(--text-secondary)}
+#m0 .deny{background:var(--bg-danger);color:var(--text-danger)}#m0 .ask{background:var(--bg-warning);color:var(--text-warning)}#m0 .allow{background:var(--bg-success);color:var(--text-success)}
+#m0 .on{background:var(--bg-accent);color:var(--text-accent)}
+#m0 .mut{color:var(--text-secondary);font-size:13px}
+#m0 .nav button{font-size:13px;padding:4px 10px}#m0 .nav button.sel{border-color:var(--border-accent);color:var(--text-accent)}
+#m0 input,#m0 select,#m0 textarea{width:100%;box-sizing:border-box;margin:4px 0}
+#m0 .err{color:var(--text-danger);font-size:13px;min-height:16px}
+#m0 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+<div id="m0"><h2 class="sr">Maxey0 dashboard: Structured Context Worlds, agents, gates, memory tiers and the scope ledger for this conversation.</h2>
+<div class="row" style="margin-bottom:12px"><img src="data:image/webp;base64,__LOGO__" width="36" height="36" alt="Maxey0 logo" style="border-radius:8px"><div><div style="font-weight:500">Maxey0 · SCWs</div><div class="mut" id="sub"></div></div></div>
+<div class="grid" id="mets"></div>
+<div class="row nav" id="nav" style="margin:12px 0"></div>
+<div id="view"></div>
+<div class="err" id="err"></div>
+</div>
+<script>
+const S=__STATE__;
+const TIERS=["working","episodic","semantic","persistent","procedural"];
+const $=i=>document.getElementById(i);
+function h(t,a,...k){const e=document.createElement(t);for(const x in a||{}){if(x==="on")for(const ev in a.on)e.addEventListener(ev,a.on[ev]);else if(x==="cls")e.className=a[x];else e.setAttribute(x,a[x])}for(const c of k.flat())if(c!=null)e.append(c.nodeType?c:String(c));return e}
+const D=JSON.parse(JSON.stringify(S));D.scws=D.scws||[];D.agents=D.agents||[];D.loops=D.loops||[];D.gates=D.gates||[];D.ledger=D.ledger||[];D.plans=D.plans||[];D.memory=D.memory||{};
+let tab="worlds",dirty=false;
+const nm=id=>(D.scws.find(s=>s.id===id)||{}).name||id;
+function err(m,ok){const e=$("err");e.textContent=m||"";e.style.color=ok?"var(--text-secondary)":""}
+function send(cmd,obj){sendPrompt("Maxey0: "+cmd+(obj?" "+JSON.stringify(obj):""))}
+function stage(){dirty=true;draw()}
+function nid(p,arr){let n=arr.length+1;while(arr.some(x=>x.id===p+n))n++;return p+n}
+function mets(){const m=$("mets");m.replaceChildren(...[["SCWs",D.scws.length],["Agents",D.agents.length],["Gates",D.gates.length],["Ledger events",D.ledger.length]].map(([l,v])=>h("div",{cls:"met"},h("span",{cls:"mut"},l),h("b",{},v))));$("sub").textContent=(D.world||"SCW0")+" · state v"+(D.rev||0)+(dirty?" · unsaved edits":"")}
+function nav(){const t=[["worlds","SCWs"],["agents","Agents"],["gates","Gates"],["memory","Memory"],["ledger","Ledger"],["plan","Plan"]];$("nav").replaceChildren(...t.map(([k,l])=>h("button",{cls:tab===k?"sel":"",on:{click:()=>{tab=k;err();draw()}}},l)),...(dirty?[h("button",{on:{click:()=>send("apply",D)}},"Apply edits ↗")]:[]))}
+function worlds(){const f={};const out=D.scws.map(s=>h("div",{cls:"card"},h("div",{cls:"row"},h("i",{cls:"ti ti-box","aria-hidden":"true"}),h("span",{style:"font-weight:500"},s.name),h("span",{cls:"chip"},s.region||"durable"),h("span",{cls:"chip"},s.id)),s.purpose?h("div",{cls:"mut"},s.purpose):null,h("div",{cls:"row",style:"margin-top:6px"},TIERS.map(t=>h("span",{cls:"chip "+((s.tiers||[]).includes(t)?"on":"")},t))),h("div",{cls:"mut",style:"margin-top:6px"},(s.files||[]).length+" files · agents: "+(D.agents.filter(a=>(a.scws||[]).includes(s.id)).map(a=>a.name).join(", ")||"none"))));
+const n=h("input",{placeholder:"Research notes"}),p=h("input",{placeholder:"What belongs in this world"}),r=h("select",{},["durable","volatile","reference"].map(x=>h("option",{value:x},x)));
+out.push(h("div",{cls:"card"},h("div",{style:"font-weight:500"},"New SCW"),n,p,r,h("button",{on:{click:()=>{const v=n.value.trim();if(!v)return err("Enter a name first");if(D.scws.some(s=>s.name.toLowerCase()===v.toLowerCase()))return err("That name's already taken");D.scws.push({id:nid("SCW",D.scws),name:v,purpose:p.value.trim(),region:r.value,tiers:["working"],files:[]});err();stage()}}},h("i",{cls:"ti ti-plus","aria-hidden":"true"})," Add")));return out}
+function agents(){const out=D.agents.map(a=>h("div",{cls:"card"},h("div",{cls:"row"},h("i",{cls:"ti ti-user","aria-hidden":"true"}),h("span",{style:"font-weight:500"},a.name),h("span",{cls:"chip"},a.role||"agent")),h("div",{cls:"row",style:"margin-top:6px"},D.scws.map(s=>h("button",{cls:"chip "+((a.scws||[]).includes(s.id)?"on":""),"aria-pressed":String((a.scws||[]).includes(s.id)),on:{click:()=>{a.scws=a.scws||[];const i=a.scws.indexOf(s.id);i<0?a.scws.push(s.id):a.scws.splice(i,1);stage()}}},s.name)))));
+D.loops.forEach(l=>out.push(h("div",{cls:"card"},h("div",{cls:"row"},h("i",{cls:"ti ti-refresh","aria-hidden":"true"}),h("span",{style:"font-weight:500"},l.name),h("span",{cls:"chip"},"max "+(l.max||3))),h("div",{cls:"mut"},(l.agents||[]).join(" → ")+(l.until?" · until "+l.until:"")))));
+const n=h("input",{placeholder:"Checker"}),r=h("input",{placeholder:"Reviews the maker's draft"});
+out.push(h("div",{cls:"card"},h("div",{style:"font-weight:500"},"New agent"),n,r,h("button",{on:{click:()=>{const v=n.value.trim();if(!v)return err("Enter a name first");if(D.agents.some(a=>a.name.toLowerCase()===v.toLowerCase()))return err("That name's already taken");D.agents.push({name:v,role:r.value.trim(),scws:[]});err();stage()}}},h("i",{cls:"ti ti-plus","aria-hidden":"true"})," Add")));return out}
+function gates(){const out=D.gates.map((g,i)=>h("div",{cls:"card row"},h("span",{cls:"chip "+g.mode},g.mode.toUpperCase()),h("span",{style:"flex:1"},g.rule),h("span",{cls:"chip"},nm(g.scw)),h("button",{"aria-label":"Remove gate",on:{click:()=>{D.gates.splice(i,1);stage()}}},h("i",{cls:"ti ti-x","aria-hidden":"true"}))));
+const s=h("select",{},D.scws.map(x=>h("option",{value:x.id},x.name))),m=h("select",{},["deny","ask","allow"].map(x=>h("option",{value:x},x))),r=h("input",{placeholder:"Send anything outside this world"});
+out.push(h("div",{cls:"card"},h("div",{style:"font-weight:500"},"New gate"),s,m,r,h("button",{on:{click:()=>{if(!D.scws.length)return err("Create an SCW first");const v=r.value.trim();if(!v)return err("Describe the rule first");D.gates.push({scw:s.value,mode:m.value,rule:v});err();stage()}}},h("i",{cls:"ti ti-lock","aria-hidden":"true"})," Add")));return out}
+function memory(){const out=[h("div",{cls:"mut"},"Five typed tiers. Items move up only through the evidence-gated promotion gate.")];TIERS.forEach(t=>{const items=D.memory[t]||[];out.push(h("div",{cls:"card"},h("div",{cls:"row"},h("span",{style:"font-weight:500"},t),h("span",{cls:"chip"},items.length+" items"),h("span",{cls:"mut"},"SCWs: "+(D.scws.filter(s=>(s.tiers||[]).includes(t)).map(s=>s.name).join(", ")||"none"))),items.slice(-3).map(x=>h("div",{cls:"mut"},"· "+(x.text||x)))))});
+D.scws.forEach(s=>out.push(h("div",{cls:"card"},h("div",{style:"font-weight:500"},s.name+" tier access"),h("div",{cls:"row"},TIERS.map(t=>h("button",{cls:"chip "+((s.tiers||[]).includes(t)?"on":""),"aria-pressed":String((s.tiers||[]).includes(t)),on:{click:()=>{s.tiers=s.tiers||[];const i=s.tiers.indexOf(t);i<0?s.tiers.push(t):s.tiers.splice(i,1);stage()}}},t))))));return out}
+function ledger(){if(!D.ledger.length)return[h("div",{cls:"mut"},"No scoped reads, writes or refusals yet.")];return D.ledger.slice(-12).reverse().map(e=>h("div",{cls:"card row"},h("span",{cls:"chip "+(e.result==="refused"?"deny":"allow")},e.result||"ok"),h("span",{style:"flex:1"},(e.agent||"Maxey0")+" "+(e.op||"")+" "+nm(e.scw||"")),h("span",{cls:"mut"},e.at||"")))}
+function plan(){const g=h("textarea",{rows:"3",placeholder:"Draft and check the launch post using only the research notes"});const ag=D.agents.map(a=>{const c=h("input",{type:"checkbox",checked:"",style:"width:auto"});return[a.name,c]});
+const out=[h("div",{cls:"card"},h("div",{style:"font-weight:500"},"Run a plan"),g,h("div",{cls:"row"},ag.map(([n,c])=>h("label",{cls:"row",style:"gap:4px"},c,n))),h("button",{on:{click:()=>{const v=g.value.trim();if(!v)return err("Describe the goal first");const pick=ag.filter(x=>x[1].checked).map(x=>x[0]);if(!pick.length)return err("Pick at least one agent");send("run",{goal:v,agents:pick,state:dirty?D:undefined})}}},h("i",{cls:"ti ti-player-play","aria-hidden":"true"})," Run plan ↗"))];
+D.plans.slice(-5).reverse().forEach(p=>out.push(h("div",{cls:"card row"},h("span",{cls:"chip "+(p.status==="done"?"allow":p.status==="failed"?"deny":"ask")},p.status),h("span",{style:"flex:1"},p.goal),h("span",{cls:"mut"},p.id))));
+out.push(h("div",{cls:"row"},h("button",{on:{click:()=>{const t=JSON.stringify(D,null,1);(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>err("State copied",1),()=>send("export"))}}},h("i",{cls:"ti ti-copy","aria-hidden":"true"})," Copy state"),h("button",{on:{click:()=>send("save")}},h("i",{cls:"ti ti-device-floppy","aria-hidden":"true"})," Save state ↗")));return out}
+const V={worlds,agents,gates,memory,ledger,plan};
+function draw(){mets();nav();$("view").replaceChildren(...V[tab]())}
+draw();
+</script>

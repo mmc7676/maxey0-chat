@@ -1,0 +1,11 @@
+# Copy to wrangler.toml, then:
+#   npx wrangler kv namespace create MAXEY0_KV      -> paste the 32-hex-character id below
+#   npx wrangler secret put WORKSPACE_KEY           -> type a random key of at least 16 characters
+#   npm run deploy
+name = "maxey0-mcp"
+main = "src/worker.ts"
+compatibility_date = "2026-10-01"
+
+[[kv_namespaces]]
+binding = "MAXEY0_KV"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
