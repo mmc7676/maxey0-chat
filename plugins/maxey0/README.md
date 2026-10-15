@@ -3,7 +3,7 @@
 Install in Claude Code:
 
 ```
-/plugin install maxey0 --marketplace mmc7676/maxey0-claudechat
+/plugin install maxey0 --marketplace mmc7676/maxey0-chat
 ```
 
 Two skills:

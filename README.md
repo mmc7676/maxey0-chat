@@ -23,10 +23,10 @@ If your account only accepts skills, upload `maxey0-skill-v2.0.0.zip` and `scw-s
 
 ### Claude Code (terminal, web or mobile)
 
-Claude Code 2.1.275 or later (older: `/plugin marketplace add mmc7676/maxey0-claudechat`, then `/plugin install maxey0@maxey0`).
+Claude Code 2.1.275 or later (older: `/plugin marketplace add mmc7676/maxey0-chat`, then `/plugin install maxey0@maxey0`).
 
 ```
-/plugin install maxey0 --marketplace mmc7676/maxey0-claudechat
+/plugin install maxey0 --marketplace mmc7676/maxey0-chat
 ```
 
 In a terminal without the inline renderer, the dashboard is written to `.maxey0/dashboard.html`; its buttons copy commands for you to paste back.
