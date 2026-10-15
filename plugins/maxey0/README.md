@@ -16,6 +16,6 @@ Set up **SCWs** (Structured Context Worlds: named containers for work), **agents
 
 ## How it is built
 
-Claude sends a 443-byte widget that loads the dashboard from `cdn.jsdelivr.net`, pinned to the `v3.1.0` tag of this repository (`app/maxey0.js`). That keeps each render to one short tool call. The dashboard sends nothing anywhere except your **Run** message back into the chat.
+Claude sends a 443-byte widget that loads the dashboard from `cdn.jsdelivr.net`, pinned to commit `4551647e4939fbea2e5e993a825a45159354ae32` of this repository (`app/maxey0.js`). That keeps each render to one short tool call. The dashboard sends nothing anywhere except your **Run** message back into the chat.
 
 `app/maxey0.js` is generated from `src/dashboard.src.html`, `src/parser.js` and `src/logo48.webp` by `tests/build-app.py`. Run `cd tests && npm install && npm test` to verify.

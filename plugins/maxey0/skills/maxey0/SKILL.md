@@ -25,7 +25,7 @@ Maxey0 or their SCWs, or writes a workflow. Speed matters: the user is waiting.
 ```html
 <div id="m0" style="min-height:96px"><p style="font-size:13px;color:var(--text-secondary)">Loading Maxey0…</p></div>
 <script>window.MAXEY0=__STATE__;setTimeout(function(){if(!window.Maxey0){document.getElementById("m0").textContent="Maxey0 could not load from cdn.jsdelivr.net. Check the connection and ask again."}},12000)</script>
-<script src="https://cdn.jsdelivr.net/gh/mmc7676/maxey0-chat@v3.1.0/plugins/maxey0/app/maxey0.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/mmc7676/maxey0-chat@4551647e4939fbea2e5e993a825a45159354ae32/plugins/maxey0/app/maxey0.js"></script>
 ```
 
 - `__STATE__` is a JSON object (write `<\/` for any `</` inside strings):

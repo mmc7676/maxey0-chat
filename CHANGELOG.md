@@ -2,7 +2,7 @@
 
 ## 3.1.0 (2026-10-14)
 - **`/maxey0` slash command:** shipped as a standalone skill named `maxey0` (`dist/maxey0-skill-v3.1.0.zip`), installed under Customize > Skills like other skills. The separate `scw` skill is folded into it, so there is one trigger.
-- **Fast:** each render is one 443-byte widget that loads the dashboard from cdn.jsdelivr.net pinned to tag `v3.1.0`, instead of Claude re-typing a 17 KB file. If the CDN cannot be reached the widget says so after 12 seconds.
+- **Fast:** each render is one 443-byte widget that loads the dashboard from cdn.jsdelivr.net pinned to commit `4551647`, instead of Claude re-typing a 17 KB file. If the CDN cannot be reached the widget says so after 12 seconds.
 - **No detours:** the skill forbids shell commands, file reads, tests and memory summaries when drawing the dashboard. On mobile, 3.0.1 ran `node`, guessed a wrong path, installed jsdom and took about 3 minutes.
 - Removed `dashboard.html`, the skill's `parser.js` copy and `standalone-shell.html` from the skill.
 - Tests: 26 (11 parser, 15 browser), including the CDN-failure message and that SKILL.md carries the widget template verbatim.

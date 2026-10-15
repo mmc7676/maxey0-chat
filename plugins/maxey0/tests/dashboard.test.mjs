@@ -119,9 +119,9 @@ for (const dark of [false, true]) test(`380px ${dark ? "dark" : "light"}: no hor
   await b.close();
 });
 
-test("the widget Claude sends is tiny and pins the app to a tag", () => {
+test("the widget Claude sends is tiny and pins the app to one commit", () => {
   assert.ok(WIDGET.length < 600, `widget template is ${WIDGET.length} bytes`);
-  assert.match(WIDGET, /cdn\.jsdelivr\.net\/gh\/mmc7676\/maxey0-chat@v3\.1\.0\//);
+  assert.match(WIDGET, /cdn\.jsdelivr\.net\/gh\/mmc7676\/maxey0-chat@4551647e4939fbea2e5e993a825a45159354ae32\//);
 });
 test("if the CDN is unreachable, the widget says so instead of hanging", async () => {
   const { b, p } = await open({}, { cdnDown: true, clock: true });
