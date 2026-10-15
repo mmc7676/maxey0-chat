@@ -1,13 +1,15 @@
-// Performs exactly the substitution SKILL.md section 2 prescribes.
+// Renders exactly what SKILL.md tells Claude to send: widget.html with __STATE__ replaced.
 import fs from "node:fs"; import path from "node:path"; import { fileURLToPath } from "node:url";
-const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "skills", "maxey0");
+const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+export const WIDGET = fs.readFileSync(path.join(root, "skills", "maxey0", "widget.html"), "utf8");
+export const APP = fs.readFileSync(path.join(root, "app", "maxey0.js"), "utf8");
+export const CDN = /^https:\/\/cdn\.jsdelivr\.net\/gh\/mmc7676\/maxey0-chat@v3\.1\.0\/plugins\/maxey0\/app\/maxey0\.js$/;
 export function renderWidget(state) {
-  const tpl = fs.readFileSync(path.join(dir, "dashboard.html"), "utf8");
-  if (tpl.split("__STATE__").length !== 2) throw new Error("template must contain __STATE__ exactly once");
-  return tpl.replace("__STATE__", () => JSON.stringify(state).replace(/<\//g, "<\\/"));
+  if (WIDGET.split("__STATE__").length !== 2) throw new Error("widget.html must contain __STATE__ exactly once");
+  return WIDGET.replace("__STATE__", () => JSON.stringify(state).replace(/<\//g, "<\\/"));
 }
 export function renderStandalone(state) {
-  const shell = fs.readFileSync(path.join(dir, "standalone-shell.html"), "utf8");
+  const shell = fs.readFileSync(path.join(root, "tests", "standalone-shell.html"), "utf8");
   return shell.replace("__WIDGET__", () => renderWidget(state));
 }
-export const example = () => JSON.parse(fs.readFileSync(path.join(dir, "state.example.json"), "utf8"));
+export const example = () => JSON.parse(fs.readFileSync(path.join(root, "skills", "maxey0", "state.example.json"), "utf8"));

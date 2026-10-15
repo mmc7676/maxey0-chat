@@ -1,21 +1,21 @@
-# maxey0 plugin (v3.0.1)
+# Maxey0 (v3.1.0)
 
-Install in Claude Code:
+Set up **SCWs** (Structured Context Worlds: named containers for work), **agents** and **workflows** in a dashboard drawn in the chat, or by typing, then run them and watch their progress.
 
-```
-/plugin install maxey0 --marketplace mmc7676/maxey0-chat
-```
+## Install
 
-In the Claude app, upload `dist/maxey0-plugin-v3.0.1.zip` from this repository (Customize > Plugins > Add plugin).
+- **Claude app, web and mobile (recommended):** upload [`dist/maxey0-skill-v3.1.0.zip`](https://github.com/mmc7676/maxey0-chat/raw/main/dist/maxey0-skill-v3.1.0.zip) in claude.ai under Customize > Skills. You then type **`/maxey0`** in any chat. Remove any older Maxey0 plugin first, so only one Maxey0 is installed.
+- **Claude Code:** `/plugin install maxey0 --marketplace mmc7676/maxey0-chat`, then `/maxey0:maxey0`.
 
-Set up **SCWs** (Structured Context Worlds: named containers for work), **agents** and **workflows**, then run them from the chat.
+## Use
 
-- **Dashboard:** say **Maxey0**. You get worlds, agents and steps in the conversation. Drag an agent onto a step, or tap the agent and then the step. Add worlds, steps and files, set what each step waits for, and turn on a checker loop. Press **Run**.
-- **Text:** paste a workflow such as `Launch SCW 5 in scw0`, `In scw5: ...`, `$pp`, `1) ...` and press **Visualize**, or send it in chat. `skills/maxey0/syntax.md` lists what is understood.
-- **Monitoring:** during a run, each step shows waiting, running, done or failed with a one-line result, and the run order updates.
+- **`/maxey0`** opens the dashboard.
+- **Type or paste a workflow** and press **Visualize**, for example `Launch SCW 5 in scw0`, `In scw5: research X /deep-research. Save to SCW5.` `syntax.md` in the skill lists what is understood.
+- **Place agents** by dragging (computer) or by tapping the agent and then the step (phone). Add worlds, steps and files, choose when a step starts, and turn on a checker loop.
+- **Run** sends the workflow to Maxey0, which runs ready steps at once (with subagents where available) and redraws the dashboard with each step's status and result.
 
-Two skills: `maxey0` draws the dashboard and runs workflows, using subagents where the surface supports them; `scw` explains SCWs. In chat (web, desktop, mobile) there is no slash command: type **Maxey0**. In Claude Code they are `/maxey0:maxey0` and `/maxey0:scw`.
+## How it is built
 
-The dashboard is drawn with Claude's built-in inline renderer: no connector, server or sign-in. Nothing is sent anywhere except back into your chat as a message when you press Run.
+Claude sends a 443-byte widget that loads the dashboard from `cdn.jsdelivr.net`, pinned to the `v3.1.0` tag of this repository (`app/maxey0.js`). That keeps each render to one short tool call. The dashboard sends nothing anywhere except your **Run** message back into the chat.
 
-Files: `skills/maxey0/dashboard.html` is generated from `src/dashboard.src.html`, `src/parser.js` and `src/logo48.webp` by `tests/build-template.py`; `skills/maxey0/parser.js` is a copy of `src/parser.js`. Run `cd tests && npm install && npm test` to verify.
+`app/maxey0.js` is generated from `src/dashboard.src.html`, `src/parser.js` and `src/logo48.webp` by `tests/build-app.py`. Run `cd tests && npm install && npm test` to verify.

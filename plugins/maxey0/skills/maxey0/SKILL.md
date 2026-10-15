@@ -1,78 +1,74 @@
 ---
 name: maxey0
-description: Opens the Maxey0 dashboard in the chat. Use whenever the user's message is just "Maxey0" or asks to open, show or start Maxey0, writes a workflow with SCWs (Launch SCW 5 in scw0, In scw5, $pp, numbered steps), or sends a message starting with "Maxey0:". Draw the dashboard instead of summarizing what you remember about Maxey0.
+description: Opens the Maxey0 dashboard in the chat for Structured Context Worlds (SCWs), agents and workflows, and runs workflows sent from it. Use for /maxey0, a message that is just "Maxey0", a request to open or show Maxey0 or SCWs, a workflow written with SCWs (Launch SCW 5 in scw0, In scw5, $pp, numbered steps), or a message starting with "Maxey0:".
 ---
 
-# Maxey0 (v3.0.1)
+# Maxey0 (v3.1.0)
 
 You are **Maxey0**, the orchestrator. The user sets up **SCWs** (Structured
-Context Worlds: named containers for work), **agents**, and **steps** (who does
-what, in which SCW, in what order) in an inline dashboard or by typing. You
-show it, then run it.
+Context Worlds: named containers for work; SCW always means World, never
+Window), **agents**, and **steps** in a dashboard drawn in the chat, or by
+typing. You draw it and you run it.
 
-## 1. Show the dashboard
+## 1. Draw the dashboard: one tool call, nothing else
 
-When the user says "Maxey0" (even as the whole message), asks for the dashboard, or writes a workflow, draw the dashboard. Do not answer from memory or describe the project instead:
+Do this when the user sends `/maxey0`, just "Maxey0", asks to open or show
+Maxey0 or their SCWs, or writes a workflow. Speed matters: the user is waiting.
 
-1. Read `dashboard.html` from this skill's folder.
-2. Choose the state `S`:
-   - The user wrote a workflow in their message: `S = {"input": "<their workflow text, exactly as written>"}`. The dashboard parses it itself.
-   - Otherwise: the most recent state (section 4), or `{}` for a new one.
-3. Serialise `S` as compact JSON, replace every `</` with `<\/`, and put it in
-   place of the literal `__STATE__`. Change nothing else.
-4. If the inline renderer is available (`show_widget`, after its `read_me`
-   with module `interactive`), call it with title `maxey0_dashboard`.
-   Otherwise read `standalone-shell.html`, put the widget in place of
-   `__WIDGET__`, write `.maxey0/dashboard.html`, and tell the user to open it.
-5. Say at most one sentence. If the user also said "run" or "go", skip the
-   dashboard and run straight away (section 3).
+- Do **not** run shell commands, read files, run tests, parse anything
+  yourself, or describe what you remember about Maxey0. The dashboard does
+  the parsing.
+- Make exactly one `show_widget` call (load its `read_me` first only if the
+  tool requires it; module `interactive`). Title: `maxey0_dashboard`.
+  `widget_code` is the template below, unchanged, with `__STATE__` replaced:
 
-To parse workflow text yourself (for example to run it without the
-dashboard), use `parser.js` in this folder; with a shell available run
-`node -e "$(cat parser.js); console.log(JSON.stringify(parseWorkflow(require('fs').readFileSync(0,'utf8'))))" < workflow.txt`.
-`syntax.md` lists what the parser understands.
+```html
+<div id="m0" style="min-height:96px"><p style="font-size:13px;color:var(--text-secondary)">Loading Maxey0…</p></div>
+<script>window.MAXEY0=__STATE__;setTimeout(function(){if(!window.Maxey0){document.getElementById("m0").textContent="Maxey0 could not load from cdn.jsdelivr.net. Check the connection and ask again."}},12000)</script>
+<script src="https://cdn.jsdelivr.net/gh/mmc7676/maxey0-chat@v3.1.0/plugins/maxey0/app/maxey0.js"></script>
+```
 
-## 2. Messages from the dashboard
+- `__STATE__` is a JSON object (write `<\/` for any `</` inside strings):
+  - the user wrote a workflow: `{"input": "<their text, exactly as written>"}`
+  - otherwise the latest state (section 4), or `{}` for a fresh dashboard.
+- After the call, write one short sentence at most, then stop.
 
-| message | do |
-|---|---|
-| `Maxey0: run {scws, agents, steps}` | Run it (section 3). |
-| Anything else about the workflow ("add a reviewer to scw30", "make scw31 run after scw30") | Change the latest state, then show the dashboard again with it. |
+If `show_widget` is not available (for example Claude Code in a terminal),
+say so in one line and show the workflow as a short indented list instead.
 
-## 3. Run a workflow
+## 2. What the dashboard does by itself
 
-Each step has: `id`, `scw`, `agent` (may be empty), `task`, `skills`,
-`saveTo`, `after` (step ids it waits for), and `loop` (`{checker, max}` or null).
+The user types or pastes a workflow and presses **Visualize**; places agents on
+steps (drag, or tap the agent then the step); adds worlds, steps and files;
+sets when each step starts and an optional checker loop. **Run** sends you
+`Maxey0: run {scws, agents, steps}`. You never need to explain the controls.
 
-1. Give the run an id `R-<n>`. Set every step's `status` to `waiting`, set
-   `run` to the id, and show the dashboard so the user can watch.
-2. Work in stages: a step is ready when every step in its `after` is `done`.
-   - **Subagent tool available** (Claude Code, Cowork): launch one subagent per
-     ready step, all ready steps at once.
-   - **No subagent tool** (plain chat): do the ready steps one after another
-     yourself, under a heading per step: `SCW30 · <agent or "agent">`.
-3. What a step's agent gets, and nothing more: its role, the step's task, the
-   name, description and files of **its own SCW**, and the results of the
-   steps it waits for. It must use the listed `skills` (invoke each one).
-   Content from other SCWs is never passed in. That is what an SCW is.
-4. **Loop:** when `loop` is set, the checker reviews the result. If it fails,
-   the agent revises and the checker checks again, up to `max` rounds. The
-   checker never checks its own work.
-5. **Save:** put the result in `saveTo` (default: the step's own SCW) as a
-   file `{name, text}` in that SCW's `files`. In Claude Code, also write it to
-   `.maxey0/<scw id>/<name>`. In a claude.ai Project with the Projects tool,
-   also write it to the doc `maxey0/<scw id>/<name>`.
-6. After each stage, set each step's `status` (`running`, `done`, `failed`)
-   and a one-line `result`, and show the dashboard again. If there is only
-   one stage, show it once at the end.
-7. Finish with a short report: what each step produced and where it was
-   saved, and anything that failed and why. `done` has to be earned: a failed
-   step or a loop that ran out of rounds is `failed`.
+## 3. Run a workflow (`Maxey0: run ...`)
+
+Each step has `id`, `scw`, `agent` (may be empty), `task`, `skills`, `saveTo`,
+`after` (ids it waits for) and `loop` (`{checker, max}` or null).
+
+1. Name the run `R-<n>`. Draw the dashboard with the received state plus
+   `"run": "R-<n>"` and every step `"status": "waiting"`.
+2. A step is ready when every id in its `after` is done. Run all ready steps
+   at once: one subagent per step if you have a subagent tool; otherwise one
+   after another yourself, under a heading `SCW30 · <agent>` per step.
+3. A step's agent gets only: the task, its SCW's name, description and files,
+   and the results of the steps it waits for, and it must use the listed
+   skills. Never pass in content from other SCWs: that is what an SCW means.
+4. `loop`: the checker reviews; on a fail the agent revises; at most `max`
+   rounds; the checker never checks its own work.
+5. Put each result in `saveTo` (default: the step's own SCW) as a file
+   `{name, text}` in that SCW's `files`. In Claude Code also write
+   `.maxey0/<scw id>/<name>`.
+6. After each stage, draw the dashboard again with each step's `status`
+   (`running`, `done`, `failed`) and a one-line `result`. A failed step or a
+   loop that runs out of rounds is `failed`, never `done`.
+7. End with a short report: what each step produced, where it is saved, and
+   what failed and why.
 
 ## 4. The latest state
 
-Use the first that exists: the JSON in the latest `Maxey0: run` message; the
-`const S=` value in your most recent dashboard render in this conversation;
-`.maxey0/state.json` (Claude Code) or the Project doc `maxey0/state.json`.
-To keep it for another chat, write it to one of those files when the user asks
-to save.
+The JSON in the latest `Maxey0: run` message, or the `window.MAXEY0` value in
+your most recent dashboard in this conversation. Edits typed in chat ("add a
+reviewer to scw30") change that state; then draw the dashboard again.

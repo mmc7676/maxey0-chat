@@ -1,6 +1,6 @@
 import { test } from "node:test"; import assert from "node:assert/strict";
 import fs from "node:fs"; import path from "node:path"; import { fileURLToPath } from "node:url";
-import { chromium } from "playwright-core"; import { renderStandalone, example } from "./render.mjs";
+import { chromium } from "playwright-core"; import { renderStandalone, example, APP, CDN, WIDGET } from "./render.mjs";
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const EXAMPLE = fs.readFileSync(path.join(dir, "example-workflow.txt"), "utf8");
 const exe = process.env.CHROME || "/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell";
@@ -12,7 +12,10 @@ async function open(state, opts = {}) {
   const p = await b.newPage({ viewport: { width: opts.width || 380, height: opts.height || 900 }, colorScheme: opts.dark ? "dark" : "light" });
   const errors = []; p.on("pageerror", (e) => errors.push(String(e)));
   await p.route(/^https?:/, (r) => r.abort());
+  if (!opts.cdnDown) await p.route(CDN, (r) => r.fulfill({ body: APP, contentType: "application/javascript" }));
+  if (opts.clock) await p.clock.install();
   await p.setContent(renderStandalone(state), { waitUntil: "domcontentloaded", timeout: 15000 });
+  if (!opts.cdnDown) await p.waitForFunction(() => window.Maxey0 && document.getElementById("pal"), null, { timeout: 15000 });
   await p.evaluate(() => { window.__sent = []; window.sendPrompt = (t) => window.__sent.push(t); });
   return { b, p, errors };
 }
@@ -114,4 +117,19 @@ for (const dark of [false, true]) test(`380px ${dark ? "dark" : "light"}: no hor
   assert.ok(!/\b(null|undefined|NaN)\b/.test(await p.textContent("#m0")));
   if (process.env.SHOTS) await p.screenshot({ path: `${process.env.SHOTS}/${dark ? "dark" : "light"}.png`, fullPage: true });
   await b.close();
+});
+
+test("the widget Claude sends is tiny and pins the app to a tag", () => {
+  assert.ok(WIDGET.length < 600, `widget template is ${WIDGET.length} bytes`);
+  assert.match(WIDGET, /cdn\.jsdelivr\.net\/gh\/mmc7676\/maxey0-chat@v3\.1\.0\//);
+});
+test("if the CDN is unreachable, the widget says so instead of hanging", async () => {
+  const { b, p } = await open({}, { cdnDown: true, clock: true });
+  assert.match(await p.textContent("#m0"), /Loading Maxey0/);
+  await p.clock.runFor(12500);
+  assert.match(await p.textContent("#m0"), /could not load from cdn\.jsdelivr\.net/); await b.close();
+});
+test("SKILL.md carries the exact widget template, so no file has to be read to render", () => {
+  const skill = fs.readFileSync(path.join(dir, "..", "skills", "maxey0", "SKILL.md"), "utf8");
+  assert.ok(skill.includes(WIDGET.trim()), "SKILL.md must contain widget.html verbatim");
 });

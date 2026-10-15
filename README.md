@@ -1,37 +1,33 @@
 # Maxey0 · Structured Context Worlds
 
-Maxey0 and its Structured Context Worlds (SCWs), packaged for Claude. Version 3.0.1, 2026-10-14.
+Maxey0 and its Structured Context Worlds (SCWs), packaged for Claude. Version 3.1.0, 2026-10-14.
 
 An SCW (Structured Context World) is a named container for a piece of work: a description, files, and the steps that run in it. SCWs can sit inside other SCWs. Maxey0 is the orchestrator: you set up SCWs, agents and workflows in an inline dashboard or by typing, and Maxey0 runs them with agents and shows their progress.
 
 | Folder | What it is | Status |
 |---|---|---|
-| `plugins/maxey0` | The plugin: `maxey0` and `scw` skills with an **inline dashboard** drawn in the chat for SCWs, agents and workflows. No connector, server or sign-in. | Primary install |
+| `plugins/maxey0` | The `maxey0` skill (also packaged as a plugin) with an **inline dashboard** drawn in the chat for SCWs, agents and workflows. No connector, server or sign-in. | Primary install |
 | `server` | Optional remote MCP server (Cloudflare Worker) that holds SCWs server-side and enforces agent scope at the tool layer, with an MCP Apps dashboard. | Optional |
 | `apps/scw-privacy-chatgpt` | *Maxey0 SCWs for ChatGPT Ads* v3.2: a privacy-first ad boundary for ChatGPT Free and Go users, one application of logical SCWs. | App + tests |
 | `research` | Sources for the paper *Logical Structured Context Worlds* (v3.1) and the in-chat dashboard write-up. | Research |
 
 ## Install
 
-### Claude app (web, desktop, iPhone, Android)
+### Claude app (web and mobile): one skill, `/maxey0`
 
-1. Download [`dist/maxey0-plugin-v3.0.1.zip`](https://github.com/mmc7676/maxey0-chat/raw/main/dist/maxey0-plugin-v3.0.1.zip). Use this file, not GitHub's green **Code > Download ZIP**: that archive is the whole repository, and Claude rejects it because the plugin is not at its top level.
-2. On claude.ai in a browser, go to Customize > Plugins > Add plugin and upload it. Uploads sync to the mobile apps.
-3. In any chat, say **Maxey0** or **show my SCWs**. The dashboard appears in the conversation.
+1. Download [`dist/maxey0-skill-v3.1.0.zip`](https://github.com/mmc7676/maxey0-chat/raw/main/dist/maxey0-skill-v3.1.0.zip). Not GitHub's green **Code > Download ZIP**, which is the whole repository.
+2. On claude.ai, remove any older Maxey0 plugin (Customize > Plugins), then upload the zip under Customize > Skills.
+3. In any chat, on web or mobile, type **`/maxey0`**.
 
-`dist/` holds only the current version; its checksum is in `dist/SHA256SUMS`.
-
-**Known issue (2026-10-14):** after uploading on claude.ai in a browser, the plugin did not appear in the Claude Android app. Not yet resolved. On the web it installs and the dashboard works.
-
-### Claude Code (terminal, web or mobile)
-
-Claude Code 2.1.275 or later (older: `/plugin marketplace add mmc7676/maxey0-chat`, then `/plugin install maxey0@maxey0`).
+### Claude Code
 
 ```
 /plugin install maxey0 --marketplace mmc7676/maxey0-chat
 ```
 
-In a terminal without the inline renderer, the dashboard is written to `.maxey0/dashboard.html`; its buttons copy commands for you to paste back.
+Then `/maxey0:maxey0`. The same skill is also in `dist/maxey0-plugin-v3.1.0.zip` for plugin uploads.
+
+`dist/` holds only the current version; checksums are in `dist/SHA256SUMS`.
 
 ### Optional: the remote server
 

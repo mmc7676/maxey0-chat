@@ -61,6 +61,3 @@ test("without $pp, a block runs in order", () => {
 test("empty input yields no steps and only SCW0", () => {
   const q = parseWorkflow("   "); assert.equal(q.steps.length, 0); assert.equal(q.scws.length, 1);
 });
-test("the parser shipped in the skill is the same file as src/parser.js", () => {
-  assert.equal(fs.readFileSync(path.join(dir, "..", "skills", "maxey0", "parser.js"), "utf8"), src);
-});
