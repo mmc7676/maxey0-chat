@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.0.0 (2026-10-14)
+
+### Plugin `maxey0` 3.0.0
+- Rebuilt around three things only: SCWs, agents and workflows. Memory tiers, regions, gates and the ledger are removed from the dashboard and the skills.
+- Type or paste a workflow (`Launch SCW 5 in scw0`, `In scw5: ...`, `$pp`, `1) ...`, `/skills`, `save to SCW5`, `when scw30 is complete`) and press **Visualize** to see it as nested worlds, steps and a run order. The same parser ships as `skills/maxey0/parser.js`; `syntax.md` documents it.
+- Place agents on steps by dragging (desktop) or by tapping the agent and then the step (phones). Add worlds, steps and files; choose when a step starts; turn on a checker loop.
+- **Run** sends the workflow to Maxey0, which runs ready steps at the same time with subagents where the surface has them, and redraws the dashboard with each step's status (waiting, running, done, failed) and result.
+- Tests: 12 parser tests (including Human0's own workflow text) and 12 headless-browser tests at 380 px.
+
 ## 2.0.0 (2026-10-14)
 
 ### Plugin `maxey0` 2.0.0

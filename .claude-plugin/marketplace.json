@@ -1,13 +1,19 @@
 {
   "name": "maxey0",
-  "owner": { "name": "Mike Cohan (Human0)", "email": "human@maxey0.com" },
-  "metadata": { "description": "Maxey0 plugins: Structured Context Worlds with an inline dashboard.", "version": "2.0.0" },
+  "owner": {
+    "name": "Mike Cohan (Human0)",
+    "email": "human@maxey0.com"
+  },
+  "metadata": {
+    "description": "Maxey0: Structured Context Worlds, agents and workflows with an inline dashboard.",
+    "version": "3.0.0"
+  },
   "plugins": [
     {
       "name": "maxey0",
       "source": "./plugins/maxey0",
-      "description": "Maxey0 orchestrator and Structured Context Worlds with an inline dashboard. No connector required.",
-      "version": "2.0.0"
+      "description": "Set up SCWs, agents and workflows in an inline dashboard or by typing, then run and monitor them. No connector required.",
+      "version": "3.0.0"
     }
   ]
 }

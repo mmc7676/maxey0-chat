@@ -1,58 +1,168 @@
 <style>
 #m0{font-size:14px;color:var(--text-primary);padding:.5rem 0}
 #m0 .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-#m0 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-#m0 .met{background:var(--surface-1);border-radius:var(--radius);padding:.75rem 1rem}
-#m0 .met b{display:block;font-size:22px;font-weight:500}
-#m0 .card{background:var(--surface-2);border:.5px solid var(--border);border-radius:12px;padding:.75rem 1rem;margin:8px 0}
-#m0 .chip{font-size:12px;padding:2px 8px;border-radius:var(--radius);background:var(--surface-1);color:var(--text-secondary)}
-#m0 .deny{background:var(--bg-danger);color:var(--text-danger)}#m0 .ask{background:var(--bg-warning);color:var(--text-warning)}#m0 .allow{background:var(--bg-success);color:var(--text-success)}
-#m0 .on{background:var(--bg-accent);color:var(--text-accent)}
+#m0 .card{background:var(--surface-2);border:.5px solid var(--border);border-radius:12px;padding:.75rem;margin:8px 0}
+#m0 .scw{border-left:2px solid var(--border-accent);border-radius:0;padding-left:10px;margin:10px 0 10px 4px}
+#m0 .chip{font-size:12px;padding:3px 9px;border-radius:var(--radius);background:var(--surface-1);color:var(--text-secondary);border:.5px solid var(--border)}
+#m0 .agent{cursor:grab;background:var(--bg-accent);color:var(--text-accent);border-color:var(--border-accent);font-size:13px;padding:6px 12px}
+#m0 .agent.pick{outline:2px solid var(--border-accent)}
+#m0 .slot{border:1px dashed var(--border-strong);border-radius:var(--radius);padding:4px 10px;font-size:13px;color:var(--text-secondary);background:transparent;min-height:32px}
+#m0 .slot.on{border-style:solid;color:var(--text-accent);background:var(--bg-accent)}
+#m0 .slot.hot{border-color:var(--border-accent)}
 #m0 .mut{color:var(--text-secondary);font-size:13px}
-#m0 .nav button{font-size:13px;padding:4px 10px}#m0 .nav button.sel{border-color:var(--border-accent);color:var(--text-accent)}
-#m0 input,#m0 select,#m0 textarea{width:100%;box-sizing:border-box;margin:4px 0}
-#m0 .err{color:var(--text-danger);font-size:13px;min-height:16px}
+#m0 .lbl{font-size:13px;font-weight:500;margin:14px 0 6px}
+#m0 input,#m0 textarea,#m0 select{width:100%;box-sizing:border-box;margin:3px 0}
+#m0 .err{font-size:13px;min-height:16px;color:var(--text-danger)}
+#m0 .stage{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:4px 0}
+#m0 .x{border:none;padding:2px 6px;color:var(--text-secondary)}
+#m0 .st-running{background:var(--bg-warning);color:var(--text-warning)}#m0 .st-done{background:var(--bg-success);color:var(--text-success)}#m0 .st-failed{background:var(--bg-danger);color:var(--text-danger)}
 #m0 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 </style>
-<div id="m0"><h2 class="sr">Maxey0 dashboard: Structured Context Worlds, agents, gates, memory tiers and the scope ledger for this conversation.</h2>
-<div class="row" style="margin-bottom:12px"><img src="data:image/webp;base64,UklGRqIDAABXRUJQVlA4IJYDAACQEACdASowADAAPpk+mEgloyIhMdzIALATCWwAnTKEdXfAfkB7EVQfwmsImYuOehTbn88d6M95J3nazkGmOiH57H+345UnAfSmzPPJb9Q+wV0hVyzISw95n+ye3IRT1VeuHtM659law1WWdQ/rd5AzfS/ypcOAEuD05XUdkCJJN7TuPd40mhmMljtZCkAA/v9WlF80D5lvAkjJzVx5D2H4q3LQiehxH8Mmmme5nRv++ha7KV/TzQp5I1m7/GkSxHMNB6GNMRRL/8M+9TIE3O4w98OOC0pbveTH88B63FA8xnD+mDK/s7UuYRs9c4zz4qcWrdAbBhTZUwjQWSFCxSSkJxOQ594rTbdp9liIIJxZ+P5qL/c2XfIn/MdoZs+zdQvJxYtlVmeTQVh4QsOJvC73q3b1sT4RIfwL9yiY+dyzwLOuu+/BLgva8dhAlVaOT8DU1diAmiZDkKZ2WEchlz2I6Sn/Ryq6qiKXYSWfaDUz4jrejCsjkO34b98tdgoH0yQ9aKbv+96dcUSxMmhtWQvTFxVR187FrF0o+hLwKUSAdK/q/5fSHv/lseneyH75sEFSC/jz0jB4UOy5SP9Xfu/m/5d+AecWYZ1LE/WiAd6uHLOHnZqtTDyenjpiwXeIsXJgoxqjsAFdPZC/6fkUUnMv6EvUyNMH1MLpv9AXgnTgShQz0HwjEpp9JJUjHXJ9YDlfsE0yiJQmyvX5L9t9v2pS2aCeu/MJ4UUeYRl9TEx9e4aELOEGC21KvK7QhXYbu67iA9bcr01SO/gS+laGJIpIY2O/kRs8lDsmDykme4L1SeSlMQp7ob7Uzir/uPaVE1nRKhXaz/60tHm6wVndez2B3eMu1E5RcyY7/5USiX9078X5PPMonFo6oGYAHYetE7JEgmaXOUfPgS3M2ygz3EtlOtR7yWe+0fTsqIuv6D8JgQYr5O6qpyjaGTHu5F+33GgI7ajh1P+LU2slrpQKykIDS5IfuqemcED1P5tglcQaRYz4pgcM7hlSgRYUAl6Z9SuNZv8BPQV35bvBvyP1MSgka7SJ6MM8iC/U0LdxBaM5CaLpjD5j53jeOuca1SLyPbntiiwr52XIDqenncRRtePjj/OQnpjKauJrE343efLj/WcbdtNisOdnuAE6CI7uRqw77SaqyNHHjkDyo4/zPPOGiciAkBOjqx8oAgGTALZFAjFyZBjrW7JfxYs2UR4CzqKK5XAAAAA=" width="36" height="36" alt="Maxey0 logo" style="border-radius:8px"><div><div style="font-weight:500">Maxey0 · SCWs</div><div class="mut" id="sub"></div></div></div>
-<div class="grid" id="mets"></div>
-<div class="row nav" id="nav" style="margin:12px 0"></div>
-<div id="view"></div>
-<div class="err" id="err"></div>
+<div id="m0"><h2 class="sr">Maxey0 workflow builder: Structured Context Worlds, the agents placed in them and the order the steps run in.</h2>
+<div class="row" style="justify-content:space-between"><div class="row"><img src="data:image/webp;base64,UklGRqIDAABXRUJQVlA4IJYDAACQEACdASowADAAPpk+mEgloyIhMdzIALATCWwAnTKEdXfAfkB7EVQfwmsImYuOehTbn88d6M95J3nazkGmOiH57H+345UnAfSmzPPJb9Q+wV0hVyzISw95n+ye3IRT1VeuHtM659law1WWdQ/rd5AzfS/ypcOAEuD05XUdkCJJN7TuPd40mhmMljtZCkAA/v9WlF80D5lvAkjJzVx5D2H4q3LQiehxH8Mmmme5nRv++ha7KV/TzQp5I1m7/GkSxHMNB6GNMRRL/8M+9TIE3O4w98OOC0pbveTH88B63FA8xnD+mDK/s7UuYRs9c4zz4qcWrdAbBhTZUwjQWSFCxSSkJxOQ594rTbdp9liIIJxZ+P5qL/c2XfIn/MdoZs+zdQvJxYtlVmeTQVh4QsOJvC73q3b1sT4RIfwL9yiY+dyzwLOuu+/BLgva8dhAlVaOT8DU1diAmiZDkKZ2WEchlz2I6Sn/Ryq6qiKXYSWfaDUz4jrejCsjkO34b98tdgoH0yQ9aKbv+96dcUSxMmhtWQvTFxVR187FrF0o+hLwKUSAdK/q/5fSHv/lseneyH75sEFSC/jz0jB4UOy5SP9Xfu/m/5d+AecWYZ1LE/WiAd6uHLOHnZqtTDyenjpiwXeIsXJgoxqjsAFdPZC/6fkUUnMv6EvUyNMH1MLpv9AXgnTgShQz0HwjEpp9JJUjHXJ9YDlfsE0yiJQmyvX5L9t9v2pS2aCeu/MJ4UUeYRl9TEx9e4aELOEGC21KvK7QhXYbu67iA9bcr01SO/gS+laGJIpIY2O/kRs8lDsmDykme4L1SeSlMQp7ob7Uzir/uPaVE1nRKhXaz/60tHm6wVndez2B3eMu1E5RcyY7/5USiX9078X5PPMonFo6oGYAHYetE7JEgmaXOUfPgS3M2ygz3EtlOtR7yWe+0fTsqIuv6D8JgQYr5O6qpyjaGTHu5F+33GgI7ajh1P+LU2slrpQKykIDS5IfuqemcED1P5tglcQaRYz4pgcM7hlSgRYUAl6Z9SuNZv8BPQV35bvBvyP1MSgka7SJ6MM8iC/U0LdxBaM5CaLpjD5j53jeOuca1SLyPbntiiwr52XIDqenncRRtePjj/OQnpjKauJrE343efLj/WcbdtNisOdnuAE6CI7uRqw77SaqyNHHjkDyo4/zPPOGiciAkBOjqx8oAgGTALZFAjFyZBjrW7JfxYs2UR4CzqKK5XAAAAA=" width="36" height="36" alt="Maxey0 logo" style="border-radius:8px"><div><div style="font-weight:500">Maxey0</div><div class="mut">Worlds, agents and workflows</div></div></div><button id="run">Run ↗</button></div>
+<div class="lbl">Describe or paste a workflow</div>
+<textarea id="txt" rows="4" placeholder="Process in parallel ($pp)&#10;Launch SCW 5 in scw0&#10;In scw5: research inline dashboards /deep-research. Save to SCW5."></textarea>
+<div class="row"><button id="viz">Visualize</button><span class="mut">Replaces the workflow below. Agents are kept.</span></div>
+<div class="err" id="err" role="status"></div>
+<div class="lbl">Run order</div><div class="mut" id="sum"></div><div id="order"></div>
+<div class="lbl">Agents</div><div class="mut">Drag an agent onto a step, or tap an agent and then tap a step.</div>
+<div class="row" id="pal" style="margin-top:6px"></div>
+<div class="row" style="flex-wrap:nowrap"><input id="an" placeholder="New agent name" aria-label="New agent name"><input id="ar" placeholder="Role" aria-label="New agent role"><button id="aa">Add</button></div>
+<div class="lbl">Worlds</div><div id="tree"></div>
 </div>
 <script>
+function parseWorkflow(text) {
+  var SCW = "(?:#)?scw\\s*(\\d*)";
+  var out = { scws: [{ id: "scw0", name: "SCW0", desc: "", parent: null, files: [] }], steps: [], tracks: [] };
+  var n = 0, cur = "scw0", track = null, fresh = true, last = {};
+  function scw(num, parent) {
+    var id = "scw" + (num === "" || num == null ? "0" : String(parseInt(num, 10)));
+    var s = out.scws.find(function (x) { return x.id === id; });
+    if (!s) { s = { id: id, name: id.toUpperCase(), desc: "", parent: parent || "scw0", files: [] }; out.scws.push(s); }
+    else if (parent && id !== "scw0" && s.parent !== parent) s.parent = parent;
+    return id;
+  }
+  function newTrack() { track = { id: "t" + (out.tracks.length + 1), parallel: false, steps: [] }; out.tracks.push(track); last = {}; fresh = true; }
+  function newStep() {
+    var prev = last[cur];
+    var st = { id: "s" + (++n), scw: cur, track: track.id, agent: "", task: "", skills: [], saveTo: "", after: [], waitFor: [], loop: null };
+    if (prev) st.after.push(prev.id);
+    else if (!track.parallel && track.steps.length) st.after.push(track.steps[track.steps.length - 1]);
+    out.steps.push(st); track.steps.push(st.id); last[cur] = st; fresh = false;
+    return st;
+  }
+  function current() { var s = last[cur]; return !s || fresh ? newStep() : s; }
+  function content(raw) {
+    var t = raw.trim(); if (!t) return;
+    var skills = [], m, re = /(^|\s)\/([a-z][\w:.-]*)/gi;
+    while ((m = re.exec(t))) skills.push(m[2]);
+    var rest = t.replace(/(^|\s)\/(?=\s|$)/g, " ");
+    var lead = rest.replace(/^(\s*\/[a-z][\w:.-]*)+/i, "").trim();
+    var save = /save\s+(?:it\s+)?(?:in|to|into)\s+(?:#)?scw\s*(\d+)/i.exec(t);
+    var wait = /when\s+(?:#)?scw\s*(\d+)(?:\s+loop)?\s+(?:is\s+)?(?:complete|completed|done|finished)/i.exec(t);
+    var onlySkills = !lead.replace(/[\s,.;:]/g, "");
+    var st = last[cur] && !fresh ? last[cur] : null;
+    if (onlySkills && st && st.task) st = newStep();
+    if (!st) st = current();
+    skills.forEach(function (k) { if (st.skills.indexOf(k) < 0) st.skills.push(k); });
+    if (!onlySkills) st.task = (st.task ? st.task + " " : "") + lead;
+    if (save) st.saveTo = scw(save[1]);
+    if (wait) { var w = "scw" + parseInt(wait[1], 10); if (st.waitFor.indexOf(w) < 0) st.waitFor.push(w); }
+  }
+  function directive(s) {
+    var m;
+    if ((m = new RegExp("^launch\\s+(?:a\\s+)?(?:logical\\s+)?" + SCW + "(?:\\s+in\\s+" + SCW + ")?\\s*[.:]?\\s*(.*)$", "i").exec(s))) {
+      scw(m[1], m[2] !== undefined ? scw(m[2]) : cur); if (m[3]) sentence(m[3]); return;
+    }
+    if ((m = new RegExp("^in\\s+" + SCW + "\\s+launch\\s+(?:a\\s+)?(?:logical\\s+)?" + SCW + "\\s*[.:]?\\s*(.*)$", "i").exec(s))) {
+      scw(m[2], scw(m[1])); if (m[3]) sentence(m[3]); return;
+    }
+    if ((m = new RegExp("^in\\s+" + SCW + "\\s*[:,]?\\s*(.*)$", "i").exec(s))) {
+      cur = scw(m[1]); fresh = true; if (m[2]) content(m[2]); return;
+    }
+    if (/^(?:process\s+in\s+parallel\s*)?\(?\$pp\)?\s*$/i.test(s) || /^process\s+in\s+parallel\b/i.test(s)) { track.parallel = true; return; }
+    if ((m = /^\d+[).]\s*(.*)$/.exec(s))) {
+      var st = last[cur] && !fresh && !last[cur].task ? last[cur] : newStep();
+      last[cur] = st; fresh = false; content(m[1]); return;
+    }
+    content(s);
+  }
+  function sentence(s) {
+    s.split(/(?<=[.:?!])\s+(?=(?:in|launch)\s+(?:a\s+)?(?:logical\s+)?#?scw)/i).forEach(function (p) { if (p.trim()) directive(p.trim()); });
+  }
+  var lines = String(text || "")
+    .replace(/\[(#?[^\]]+)\]\((?:https?:)?[^)]*\)/g, "$1")
+    .replace(/\r/g, "").split("\n");
+  newTrack();
+  lines.forEach(function (raw) {
+    var line = raw.trim();
+    if (/^-{3,}$/.test(line)) { if (track.steps.length) newTrack(); return; }
+    if (/^\$pp\b/i.test(line) && track.steps.length) newTrack();
+    if (!line) return;
+    sentence(line);
+  });
+  out.tracks = out.tracks.filter(function (t) { return t.steps.length; });
+  out.steps.forEach(function (st) {
+    st.waitFor.forEach(function (w) {
+      var ids = {}; ids[w] = 1; var grew = true;
+      while (grew) { grew = false; out.scws.forEach(function (s) { if (ids[s.parent] && !ids[s.id]) { ids[s.id] = 1; grew = true; } }); }
+      out.steps.forEach(function (o) { if (o !== st && ids[o.scw] && st.after.indexOf(o.id) < 0) st.after.push(o.id); });
+    });
+    delete st.waitFor;
+  });
+  return out;
+}
+function stagesOf(steps) {
+  var level = {}, byId = {}, stages = [];
+  steps.forEach(function (s) { byId[s.id] = s; });
+  function lv(s, seen) {
+    if (level[s.id] != null) return level[s.id];
+    if (seen[s.id]) return 0;
+    seen[s.id] = 1;
+    var l = 0;
+    s.after.forEach(function (a) { if (byId[a]) l = Math.max(l, lv(byId[a], seen) + 1); });
+    return (level[s.id] = l);
+  }
+  steps.forEach(function (s) { var l = lv(s, {}); (stages[l] = stages[l] || []).push(s.id); });
+  return stages.filter(Boolean);
+}
 const S=__STATE__;
-const TIERS=["working","episodic","semantic","persistent","procedural"];
 const $=i=>document.getElementById(i);
-function h(t,a,...k){const e=document.createElement(t);for(const x in a||{}){if(x==="on")for(const ev in a.on)e.addEventListener(ev,a.on[ev]);else if(x==="cls")e.className=a[x];else e.setAttribute(x,a[x])}for(const c of k.flat())if(c!=null)e.append(c.nodeType?c:String(c));return e}
-const D=JSON.parse(JSON.stringify(S));D.scws=D.scws||[];D.agents=D.agents||[];D.loops=D.loops||[];D.gates=D.gates||[];D.ledger=D.ledger||[];D.plans=D.plans||[];D.memory=D.memory||{};
-let tab="worlds",dirty=false;
-const nm=id=>(D.scws.find(s=>s.id===id)||{}).name||id;
-function err(m,ok){const e=$("err");e.textContent=m||"";e.style.color=ok?"var(--text-secondary)":""}
-function send(cmd,obj){sendPrompt("Maxey0: "+cmd+(obj?" "+JSON.stringify(obj):""))}
-function stage(){dirty=true;draw()}
-function nid(p,arr){let n=arr.length+1;while(arr.some(x=>x.id===p+n))n++;return p+n}
-function mets(){const m=$("mets");m.replaceChildren(...[["SCWs",D.scws.length],["Agents",D.agents.length],["Gates",D.gates.length],["Ledger events",D.ledger.length]].map(([l,v])=>h("div",{cls:"met"},h("span",{cls:"mut"},l),h("b",{},v))));$("sub").textContent=(D.world||"SCW0")+" · state v"+(D.rev||0)+(dirty?" · unsaved edits":"")}
-function nav(){const t=[["worlds","SCWs"],["agents","Agents"],["gates","Gates"],["memory","Memory"],["ledger","Ledger"],["plan","Plan"]];$("nav").replaceChildren(...t.map(([k,l])=>h("button",{cls:tab===k?"sel":"",on:{click:()=>{tab=k;err();draw()}}},l)),...(dirty?[h("button",{on:{click:()=>send("apply",D)}},"Apply edits ↗")]:[]))}
-function worlds(){const f={};const out=D.scws.map(s=>h("div",{cls:"card"},h("div",{cls:"row"},h("i",{cls:"ti ti-box","aria-hidden":"true"}),h("span",{style:"font-weight:500"},s.name),h("span",{cls:"chip"},s.region||"durable"),h("span",{cls:"chip"},s.id)),s.purpose?h("div",{cls:"mut"},s.purpose):null,h("div",{cls:"row",style:"margin-top:6px"},TIERS.map(t=>h("span",{cls:"chip "+((s.tiers||[]).includes(t)?"on":"")},t))),h("div",{cls:"mut",style:"margin-top:6px"},(s.files||[]).length+" files · agents: "+(D.agents.filter(a=>(a.scws||[]).includes(s.id)).map(a=>a.name).join(", ")||"none"))));
-const n=h("input",{placeholder:"Research notes"}),p=h("input",{placeholder:"What belongs in this world"}),r=h("select",{},["durable","volatile","reference"].map(x=>h("option",{value:x},x)));
-out.push(h("div",{cls:"card"},h("div",{style:"font-weight:500"},"New SCW"),n,p,r,h("button",{on:{click:()=>{const v=n.value.trim();if(!v)return err("Enter a name first");if(D.scws.some(s=>s.name.toLowerCase()===v.toLowerCase()))return err("That name's already taken");D.scws.push({id:nid("SCW",D.scws),name:v,purpose:p.value.trim(),region:r.value,tiers:["working"],files:[]});err();stage()}}},h("i",{cls:"ti ti-plus","aria-hidden":"true"})," Add")));return out}
-function agents(){const out=D.agents.map(a=>h("div",{cls:"card"},h("div",{cls:"row"},h("i",{cls:"ti ti-user","aria-hidden":"true"}),h("span",{style:"font-weight:500"},a.name),h("span",{cls:"chip"},a.role||"agent")),h("div",{cls:"row",style:"margin-top:6px"},D.scws.map(s=>h("button",{cls:"chip "+((a.scws||[]).includes(s.id)?"on":""),"aria-pressed":String((a.scws||[]).includes(s.id)),on:{click:()=>{a.scws=a.scws||[];const i=a.scws.indexOf(s.id);i<0?a.scws.push(s.id):a.scws.splice(i,1);stage()}}},s.name)))));
-D.loops.forEach(l=>out.push(h("div",{cls:"card"},h("div",{cls:"row"},h("i",{cls:"ti ti-refresh","aria-hidden":"true"}),h("span",{style:"font-weight:500"},l.name),h("span",{cls:"chip"},"max "+(l.max||3))),h("div",{cls:"mut"},(l.agents||[]).join(" → ")+(l.until?" · until "+l.until:"")))));
-const n=h("input",{placeholder:"Checker"}),r=h("input",{placeholder:"Reviews the maker's draft"});
-out.push(h("div",{cls:"card"},h("div",{style:"font-weight:500"},"New agent"),n,r,h("button",{on:{click:()=>{const v=n.value.trim();if(!v)return err("Enter a name first");if(D.agents.some(a=>a.name.toLowerCase()===v.toLowerCase()))return err("That name's already taken");D.agents.push({name:v,role:r.value.trim(),scws:[]});err();stage()}}},h("i",{cls:"ti ti-plus","aria-hidden":"true"})," Add")));return out}
-function gates(){const out=D.gates.map((g,i)=>h("div",{cls:"card row"},h("span",{cls:"chip "+g.mode},g.mode.toUpperCase()),h("span",{style:"flex:1"},g.rule),h("span",{cls:"chip"},nm(g.scw)),h("button",{"aria-label":"Remove gate",on:{click:()=>{D.gates.splice(i,1);stage()}}},h("i",{cls:"ti ti-x","aria-hidden":"true"}))));
-const s=h("select",{},D.scws.map(x=>h("option",{value:x.id},x.name))),m=h("select",{},["deny","ask","allow"].map(x=>h("option",{value:x},x))),r=h("input",{placeholder:"Send anything outside this world"});
-out.push(h("div",{cls:"card"},h("div",{style:"font-weight:500"},"New gate"),s,m,r,h("button",{on:{click:()=>{if(!D.scws.length)return err("Create an SCW first");const v=r.value.trim();if(!v)return err("Describe the rule first");D.gates.push({scw:s.value,mode:m.value,rule:v});err();stage()}}},h("i",{cls:"ti ti-lock","aria-hidden":"true"})," Add")));return out}
-function memory(){const out=[h("div",{cls:"mut"},"Five typed tiers. Items move up only through the evidence-gated promotion gate.")];TIERS.forEach(t=>{const items=D.memory[t]||[];out.push(h("div",{cls:"card"},h("div",{cls:"row"},h("span",{style:"font-weight:500"},t),h("span",{cls:"chip"},items.length+" items"),h("span",{cls:"mut"},"SCWs: "+(D.scws.filter(s=>(s.tiers||[]).includes(t)).map(s=>s.name).join(", ")||"none"))),items.slice(-3).map(x=>h("div",{cls:"mut"},"· "+(x.text||x)))))});
-D.scws.forEach(s=>out.push(h("div",{cls:"card"},h("div",{style:"font-weight:500"},s.name+" tier access"),h("div",{cls:"row"},TIERS.map(t=>h("button",{cls:"chip "+((s.tiers||[]).includes(t)?"on":""),"aria-pressed":String((s.tiers||[]).includes(t)),on:{click:()=>{s.tiers=s.tiers||[];const i=s.tiers.indexOf(t);i<0?s.tiers.push(t):s.tiers.splice(i,1);stage()}}},t))))));return out}
-function ledger(){if(!D.ledger.length)return[h("div",{cls:"mut"},"No scoped reads, writes or refusals yet.")];return D.ledger.slice(-12).reverse().map(e=>h("div",{cls:"card row"},h("span",{cls:"chip "+(e.result==="refused"?"deny":"allow")},e.result||"ok"),h("span",{style:"flex:1"},(e.agent||"Maxey0")+" "+(e.op||"")+" "+nm(e.scw||"")),h("span",{cls:"mut"},e.at||"")))}
-function plan(){const g=h("textarea",{rows:"3",placeholder:"Draft and check the launch post using only the research notes"});const ag=D.agents.map(a=>{const c=h("input",{type:"checkbox",checked:"",style:"width:auto"});return[a.name,c]});
-const out=[h("div",{cls:"card"},h("div",{style:"font-weight:500"},"Run a plan"),g,h("div",{cls:"row"},ag.map(([n,c])=>h("label",{cls:"row",style:"gap:4px"},c,n))),h("button",{on:{click:()=>{const v=g.value.trim();if(!v)return err("Describe the goal first");const pick=ag.filter(x=>x[1].checked).map(x=>x[0]);if(!pick.length)return err("Pick at least one agent");send("run",{goal:v,agents:pick,state:dirty?D:undefined})}}},h("i",{cls:"ti ti-player-play","aria-hidden":"true"})," Run plan ↗"))];
-D.plans.slice(-5).reverse().forEach(p=>out.push(h("div",{cls:"card row"},h("span",{cls:"chip "+(p.status==="done"?"allow":p.status==="failed"?"deny":"ask")},p.status),h("span",{style:"flex:1"},p.goal),h("span",{cls:"mut"},p.id))));
-out.push(h("div",{cls:"row"},h("button",{on:{click:()=>{const t=JSON.stringify(D,null,1);(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>err("State copied",1),()=>send("export"))}}},h("i",{cls:"ti ti-copy","aria-hidden":"true"})," Copy state"),h("button",{on:{click:()=>send("save")}},h("i",{cls:"ti ti-device-floppy","aria-hidden":"true"})," Save state ↗")));return out}
-const V={worlds,agents,gates,memory,ledger,plan};
-function draw(){mets();nav();$("view").replaceChildren(...V[tab]())}
+function h(t,a,...k){const e=document.createElement(t);for(const x in a||{}){if(x==="on")for(const v in a.on)e.addEventListener(v,a.on[v]);else if(x==="cls")e.className=a[x];else if(x==="value")e.value=a[x];else e.setAttribute(x,a[x])}for(const c of k.flat())if(c!=null&&c!==false)e.append(c.nodeType?c:String(c));return e}
+let D={scws:[{id:"scw0",name:"SCW0",desc:"",parent:null,files:[]}],agents:[{name:"Maxey1",role:"maker"},{name:"Maxey2",role:"checker"},{name:"Maxey3",role:"judge"}],steps:[]};
+if(S&&S.scws)D=Object.assign(D,JSON.parse(JSON.stringify(S)));
+let pick=null,sid=0;
+D.steps.forEach(s=>{const k=parseInt(String(s.id).replace(/\D/g,""),10);if(k>sid)sid=k});
+function msg(m,ok){const e=$("err");e.textContent=m||"";e.style.color=ok?"var(--text-secondary)":""}
+function nm(id){const s=D.scws.find(x=>x.id===id);return s?s.name:id}
+function label(s){const w=(s.task||"").replace(/\/[\w:.-]+/g,"").trim().split(/\s+/).filter(Boolean),t=w.slice(0,4).join(" ")+(w.length>4?"…":"");return nm(s.scw)+" · "+(s.agent?s.agent+(t?": "+t:""):t||((s.skills||[])[0]?"/"+s.skills[0]:"new step"))}
+function visualize(t){const p=parseWorkflow(t);if(!p.steps.length){msg("Add a task, for example: In scw1: draft the plan");return false}D.scws=p.scws;D.steps=p.steps.map(s=>Object.assign({agent:"",loop:null},s));sid=D.steps.length;msg("Drew "+p.scws.length+" worlds and "+p.steps.length+" steps.",1);return true}
+function summary(){const n=D.steps.length,c=k=>D.steps.filter(s=>s.status===k).length;$("sum").textContent=D.run?(D.run+": "+c("done")+" of "+n+" done"+(c("running")?", "+c("running")+" running":"")+(c("failed")?", "+c("failed")+" failed":"")):""}
+function order(){const st=stagesOf(D.steps);const o=$("order");if(!st.length){o.replaceChildren(h("div",{cls:"mut"},"Nothing to run yet."));return}
+o.replaceChildren(...st.map((g,i)=>h("div",{cls:"stage"},h("span",{cls:"mut",style:"min-width:62px"},i?"then":"first"),g.length>1?h("span",{cls:"chip"},"at once"):null,g.map(id=>{const s=D.steps.find(x=>x.id===id);return h("span",{cls:"chip"+(s.status?" st-"+s.status:"")},label(s),s.status?" · "+s.status:"")}))))}
+function place(step,name){step.agent=name;pick=null;draw();msg(name?name+" placed in "+nm(step.scw)+".":"Agent removed.",1)}
+function palette(){$("pal").replaceChildren(...D.agents.map(a=>h("span",{cls:"chip agent"+(pick===a.name?" pick":""),role:"button",tabindex:"0",draggable:"true","aria-pressed":String(pick===a.name),title:a.role||"",on:{dragstart:e=>{e.dataTransfer.setData("text/plain",a.name);e.dataTransfer.effectAllowed="copy"},click:()=>{pick=pick===a.name?null:a.name;palette()},keydown:e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();pick=pick===a.name?null:a.name;palette()}}}},a.name,a.role?" · "+a.role:"")))}
+function addAgent(){const n=$("an").value.trim(),r=$("ar").value.trim();if(!n)return msg("Enter an agent name first");if(D.agents.some(a=>a.name.toLowerCase()===n.toLowerCase()))return msg("That name's already taken");D.agents.push({name:n,role:r});$("an").value="";$("ar").value="";msg("Added "+n+".",1);palette()}
+function stepCard(s){const others=D.steps.filter(x=>x.id!==s.id);
+const slot=h("button",{cls:"slot"+(s.agent?" on":""),"aria-label":"Agent for this step",on:{click:()=>{if(pick)place(s,pick);else if(s.agent)place(s,"");else msg("Tap an agent first, then tap this step")},dragover:e=>{e.preventDefault();slot.classList.add("hot")},dragleave:()=>slot.classList.remove("hot"),drop:e=>{e.preventDefault();slot.classList.remove("hot");const n=e.dataTransfer.getData("text/plain");if(D.agents.some(a=>a.name===n))place(s,n)}}},s.agent?s.agent+" ×":"Drop an agent");
+const task=h("textarea",{rows:"2","aria-label":"Task",placeholder:"What should happen in this step",on:{input:e=>{s.task=e.target.value}}});task.value=s.task||"";
+const dep=h("select",{"aria-label":"When this step starts",on:{change:e=>{s.after=e.target.value?[e.target.value]:[];draw()}}},h("option",{value:""},"Starts at once"),others.map(o=>h("option",{value:o.id},"After "+label(o))));dep.value=s.after.length===1?s.after[0]:"";
+const loop=h("div",{cls:"row"},h("label",{cls:"row mut",style:"gap:4px"},h("input",{type:"checkbox",style:"width:auto",on:{change:e=>{s.loop=e.target.checked?{checker:(D.agents.find(a=>a.name!==s.agent)||{}).name||"",max:3}:null;draw()}}}),"Loop until a checker passes it"),s.loop?h("select",{"aria-label":"Checker",on:{change:e=>{s.loop.checker=e.target.value}}},D.agents.filter(a=>a.name!==s.agent).map(a=>h("option",{value:a.name},"checked by "+a.name))):null);
+if(s.loop){loop.querySelector("input").checked=true;const sel=loop.querySelector("select");if(sel)sel.value=s.loop.checker}
+return h("div",{cls:"card"},h("div",{cls:"row",style:"justify-content:space-between"},slot,h("button",{cls:"x","aria-label":"Remove step",on:{click:()=>{D.steps=D.steps.filter(x=>x!==s);D.steps.forEach(x=>x.after=x.after.filter(a=>a!==s.id));draw()}}},"×")),task,(s.skills||[]).length?h("div",{cls:"row"},s.skills.map(k=>h("span",{cls:"chip"},"/"+k))):null,dep,s.after.length>1?h("div",{cls:"mut"},"Waits for "+s.after.map(a=>{const o=D.steps.find(x=>x.id===a);return o?label(o):a}).join(", ")):null,s.saveTo?h("div",{cls:"mut"},"Saves to "+nm(s.saveTo)):null,s.status?h("div",{cls:"row"},h("span",{cls:"chip st-"+s.status},s.status),s.result?h("span",{cls:"mut"},s.result):null):null,loop)}
+function scwCard(w){const kids=D.scws.filter(x=>x.parent===w.id);
+const name=h("input",{"aria-label":"World name",value:w.name,on:{change:e=>{w.name=e.target.value.trim()||w.id.toUpperCase();draw()}},style:"font-weight:500"});
+const desc=h("input",{"aria-label":"World description",placeholder:"What belongs in this world",value:w.desc||"",on:{input:e=>{w.desc=e.target.value}}});
+const file=h("input",{type:"file",multiple:"",style:"display:none",on:{change:e=>{[...e.target.files].forEach(f=>{const rec={name:f.name,chars:0,text:""};w.files.push(rec);if(f.size<=40000&&/^text\/|json|xml|csv|markdown|javascript/.test(f.type||"text/")){const r=new FileReader();r.onload=()=>{rec.text=String(r.result).slice(0,20000);rec.chars=rec.text.length;draw()};r.readAsText(f)}});draw()}}});
+return h("div",{cls:"scw"},h("div",{cls:"row"},h("span",{cls:"chip"},w.id),w.id!=="scw0"?h("button",{cls:"x","aria-label":"Remove world",on:{click:()=>{const gone=new Set([w.id]);let g=1;while(g){g=0;D.scws.forEach(s=>{if(gone.has(s.parent)&&!gone.has(s.id)){gone.add(s.id);g=1}})}D.scws=D.scws.filter(s=>!gone.has(s.id));const ids=new Set(D.steps.filter(s=>gone.has(s.scw)).map(s=>s.id));D.steps=D.steps.filter(s=>!ids.has(s.id));D.steps.forEach(s=>{s.after=s.after.filter(a=>!ids.has(a));if(gone.has(s.saveTo))s.saveTo=""});draw()}}},"×"):null),name,desc,
+(w.files||[]).length?h("div",{cls:"row"},w.files.map((f,i)=>h("span",{cls:"chip"},f.name+(f.text?"":" (attach in chat)"),h("button",{cls:"x","aria-label":"Remove file",on:{click:()=>{w.files.splice(i,1);draw()}}},"×")))):null,
+D.steps.filter(s=>s.scw===w.id).map(stepCard),
+h("div",{cls:"row"},h("button",{on:{click:()=>{const prev=D.steps.filter(s=>s.scw===w.id).pop();D.steps.push({id:"s"+(++sid),scw:w.id,agent:pick||"",task:"",skills:[],saveTo:"",after:prev?[prev.id]:[],loop:null});pick=null;draw()}}},"+ step"),h("button",{on:{click:()=>{let n=1;while(D.scws.some(s=>s.id==="scw"+n))n++;D.scws.push({id:"scw"+n,name:"SCW"+n,desc:"",parent:w.id,files:[]});draw()}}},"+ world inside"),h("button",{on:{click:()=>file.click()}},"+ file"),file),
+kids.map(scwCard))}
+function draw(){summary();order();palette();$("tree").replaceChildren(scwCard(D.scws.find(s=>s.id==="scw0")))}
+$("aa").addEventListener("click",addAgent);
+$("viz").addEventListener("click",()=>{if(visualize($("txt").value))draw()});
+$("run").addEventListener("click",()=>{const live=D.steps.filter(s=>(s.task||"").trim()||(s.skills||[]).length);if(!live.length)return msg("Add at least one step with a task first");sendPrompt("Maxey0: run "+JSON.stringify({scws:D.scws,agents:D.agents,steps:live}))});
+if(S&&S.input){$("txt").value=S.input;visualize(S.input)}
 draw();
 </script>

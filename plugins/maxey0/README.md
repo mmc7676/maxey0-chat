@@ -1,4 +1,4 @@
-# maxey0 plugin (v2.0.0)
+# maxey0 plugin (v3.0.0)
 
 Install in Claude Code:
 
@@ -6,13 +6,16 @@ Install in Claude Code:
 /plugin install maxey0 --marketplace mmc7676/maxey0-chat
 ```
 
-Two skills:
+In the Claude app, upload `dist/maxey0-plugin-v3.0.0.zip` from this repository (Customize > Plugins > Add plugin).
 
-- `maxey0` (shows as `/maxey0:maxey0`): the orchestrator. Renders the Maxey0 dashboard inside the chat and runs plans across SCWs.
-- `scw` (shows as `/maxey0:scw`): what a Structured Context World is, its five typed memory tiers, regions and gates.
+Set up **SCWs** (Structured Context Worlds: named containers for work), **agents** and **workflows**, then run them from the chat.
 
-Say "Maxey0" or "show my SCWs" to open the dashboard. Buttons send `Maxey0: apply`, `Maxey0: run`, `Maxey0: save` or `Maxey0: export` back to the chat.
+- **Dashboard:** say **Maxey0**. You get worlds, agents and steps in the conversation. Drag an agent onto a step, or tap the agent and then the step. Add worlds, steps and files, set what each step waits for, and turn on a checker loop. Press **Run**.
+- **Text:** paste a workflow such as `Launch SCW 5 in scw0`, `In scw5: ...`, `$pp`, `1) ...` and press **Visualize**, or send it in chat. `skills/maxey0/syntax.md` lists what is understood.
+- **Monitoring:** during a run, each step shows waiting, running, done or failed with a one-line result, and the run order updates.
 
-The dashboard is drawn with Claude's built-in inline renderer, so it needs no connector, server or sign-in. In a terminal session without that renderer, the skill writes `.maxey0/dashboard.html` instead.
+Two skills: `maxey0` (`/maxey0:maxey0`) draws the dashboard and runs workflows, using subagents where the surface supports them; `scw` (`/maxey0:scw`) explains SCWs.
 
-Files: `skills/maxey0/dashboard.html` is generated from `src/dashboard.src.html` and `src/logo48.webp` by `tests/build-template.py`; run `cd tests && npm i && npm test` to verify.
+The dashboard is drawn with Claude's built-in inline renderer: no connector, server or sign-in. Nothing is sent anywhere except back into your chat as a message when you press Run.
+
+Files: `skills/maxey0/dashboard.html` is generated from `src/dashboard.src.html`, `src/parser.js` and `src/logo48.webp` by `tests/build-template.py`; `skills/maxey0/parser.js` is a copy of `src/parser.js`. Run `cd tests && npm install && npm test` to verify.

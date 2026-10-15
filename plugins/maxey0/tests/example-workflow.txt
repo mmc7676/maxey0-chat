@@ -1,0 +1,31 @@
+In [#scw0](https://www.linkedin.com/search/results/all/?keywords=%23scw0&origin=HASH_TAG_FROM_FEED)
+Process in parallel ($pp)
+/effort-optimizer /supersystem-integrate How would you /file-graph the in-line visualization functionality or vise-versa?
+-----
+Process in parallel ($pp)
+Launch logical SCW 5 in scw0
+In scw5 launch SCW 30. In scw30:
+/effort-optimizer /deep-research What is the best way way to take advantage of inline visualization availability finally so [#Maxey0](https://www.linkedin.com/search/results/all/?keywords=%23maxey0&origin=HASH_TAG_FROM_FEED) + SCWs can just be run from the chat + have it be a dashboard connected as an in-chat MCP app?
+
+Synthesize your results into a markdown paper + save in SCW30.
+
+In SCW5 /research-paper-pdf when scw30 loop complete. Save to SCW5, printable on demand.
+
+----
+$pp
+Launch scw31 in scw5
+In scw31
+/effort-optimizer /supersystem-integrate
+1) Teach yourself this + then extract the Skill(s) for SCW's from  'https://lnkd.in/geJwmaSj'.
+
+/effort-optimizer /
+/supersystem-integrate
+2) Rebuild SCW's as a standalone Skill package that loads inline visualizations with the Maxey0 logo. Save in scw31 shippable on demand.
+
+$pp
+Launch scw32 in SCW
+In scw32
+/effort-optimizer
+/supersystem-integrate
+
+1) Rewrite Maxey0 as a Skill package that integrates with the SCW inline visualization interactive dashboard. Save in SCW32 shippable on demand.

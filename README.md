@@ -1,12 +1,12 @@
 # Maxey0 · Structured Context Worlds
 
-Maxey0 and its Structured Context Worlds (SCWs), packaged for Claude. Version 2.0.0, 2026-10-14.
+Maxey0 and its Structured Context Worlds (SCWs), packaged for Claude. Version 3.0.0, 2026-10-14.
 
-An SCW is a named, bounded context world with explicit rules for what may enter and leave it. Maxey0 is the orchestrator that runs agents inside their SCWs, honoring loops and gates, over five typed memory tiers (working, episodic, semantic, persistent, procedural) joined by an evidence-gated promotion gate.
+An SCW (Structured Context World) is a named container for a piece of work: a description, files, and the steps that run in it. SCWs can sit inside other SCWs. Maxey0 is the orchestrator: you set up SCWs, agents and workflows in an inline dashboard or by typing, and Maxey0 runs them with agents and shows their progress.
 
 | Folder | What it is | Status |
 |---|---|---|
-| `plugins/maxey0` | The plugin: `maxey0` and `scw` skills with an **inline dashboard** drawn in the chat. No connector, server or sign-in. | Primary install |
+| `plugins/maxey0` | The plugin: `maxey0` and `scw` skills with an **inline dashboard** drawn in the chat for SCWs, agents and workflows. No connector, server or sign-in. | Primary install |
 | `server` | Optional remote MCP server (Cloudflare Worker) that holds SCWs server-side and enforces agent scope at the tool layer, with an MCP Apps dashboard. | Optional |
 | `apps/scw-privacy-chatgpt` | *Maxey0 SCWs for ChatGPT Ads* v3.2: a privacy-first ad boundary for ChatGPT Free and Go users, one application of logical SCWs. | App + tests |
 | `research` | Sources for the paper *Logical Structured Context Worlds* (v3.1) and the in-chat dashboard write-up. | Research |
@@ -15,11 +15,13 @@ An SCW is a named, bounded context world with explicit rules for what may enter 
 
 ### Claude app (web, desktop, iPhone, Android)
 
-1. Download [`dist/maxey0-plugin-v2.0.0.zip`](https://github.com/mmc7676/maxey0-chat/raw/main/dist/maxey0-plugin-v2.0.0.zip). Use this file, not GitHub's green **Code > Download ZIP**: that archive is the whole repository, and Claude rejects it because the plugin is not at its top level.
+1. Download [`dist/maxey0-plugin-v3.0.0.zip`](https://github.com/mmc7676/maxey0-chat/raw/main/dist/maxey0-plugin-v3.0.0.zip). Use this file, not GitHub's green **Code > Download ZIP**: that archive is the whole repository, and Claude rejects it because the plugin is not at its top level.
 2. On claude.ai in a browser, go to Customize > Plugins > Add plugin and upload it. Uploads sync to the mobile apps.
 3. In any chat, say **Maxey0** or **show my SCWs**. The dashboard appears in the conversation.
 
-If your account only accepts skills, upload `dist/maxey0-skill-v2.0.0.zip` and `dist/scw-skill-v2.0.0.zip` instead. Checksums are in `dist/SHA256SUMS`.
+`dist/` holds only the current version; its checksum is in `dist/SHA256SUMS`.
+
+**Known issue (2026-10-14):** after uploading on claude.ai in a browser, the plugin did not appear in the Claude Android app. Not yet resolved. On the web it installs and the dashboard works.
 
 ### Claude Code (terminal, web or mobile)
 
@@ -50,7 +52,7 @@ When the server's tools are present, the skills use them; otherwise they use the
 
 ## What is enforced, and where
 
-- **Plugin (logical SCWs):** the boundary is a protocol the model follows and records in a ledger: what goes into each agent's context, which gates stop it. Isolation inside the model's own reasoning in plain chat is not claimed.
+- **Plugin (logical SCWs):** the boundary is what Maxey0 puts into each agent's context: its own SCW's description and files, and the results it waits for. Isolation inside the model's own reasoning in plain chat is not claimed.
 - **Server:** for calls that name an agent (`asAgent`), out-of-scope reads and writes are refused with `isolation_violation` and logged.
 - **ChatGPT app:** its own evaluator enforces your policy inside the app; in ChatGPT only ChatGPT's settings are enforced and the exported profile is advisory. See its README.
 

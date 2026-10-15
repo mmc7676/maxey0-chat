@@ -1,91 +1,117 @@
 import { test } from "node:test"; import assert from "node:assert/strict";
+import fs from "node:fs"; import path from "node:path"; import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core"; import { renderStandalone, example } from "./render.mjs";
+const dir = path.dirname(fileURLToPath(import.meta.url));
+const EXAMPLE = fs.readFileSync(path.join(dir, "example-workflow.txt"), "utf8");
 const exe = process.env.CHROME || "/opt/pw-browsers/chromium_headless_shell-1194/chrome-linux/headless_shell";
+const opened = [];
+import { after } from "node:test";
+after(async () => { for (const b of opened) await b.close().catch(() => {}); });
 async function open(state, opts = {}) {
-  const b = await chromium.launch({ executablePath: exe });
-  const p = await b.newPage({ viewport: { width: opts.width || 380, height: 800 }, colorScheme: opts.dark ? "dark" : "light" });
-  const errors = []; p.on("pageerror", e => errors.push(String(e)));
-  await p.route(/^https?:/, r => r.abort()); // offline: no CDN
+  const b = await chromium.launch({ executablePath: exe }); opened.push(b);
+  const p = await b.newPage({ viewport: { width: opts.width || 380, height: opts.height || 900 }, colorScheme: opts.dark ? "dark" : "light" });
+  const errors = []; p.on("pageerror", (e) => errors.push(String(e)));
+  await p.route(/^https?:/, (r) => r.abort());
   await p.setContent(renderStandalone(state), { waitUntil: "domcontentloaded", timeout: 15000 });
-  await p.evaluate(() => { window.__sent = []; window.sendPrompt = t => window.__sent.push(t); });
+  await p.evaluate(() => { window.__sent = []; window.sendPrompt = (t) => window.__sent.push(t); });
   return { b, p, errors };
 }
-const btn = (p, name) => p.getByRole("button", { name, exact: false }).first();
-const sent = p => p.evaluate(() => window.__sent);
+const sent = (p) => p.evaluate(() => window.__sent);
+const steps = (p) => p.locator("#tree .card");
+const world = (p, id) => p.locator(".scw").filter({ has: p.locator(":scope > .row > .chip", { hasText: new RegExp(`^${id}$`) }) });
+async function runPayload(p) { await p.click("#run"); const m = (await sent(p)).at(-1); assert.ok(m && m.startsWith("Maxey0: run "), "Run sends a Maxey0: run message"); return JSON.parse(m.slice(12)); }
 
-test("renders example state with correct counts and no script errors", async () => {
-  const { b, p, errors } = await open(example());
-  const mets = await p.$$eval("#mets .met b", e => e.map(x => x.textContent));
-  assert.deepEqual(mets, ["3", "3", "2", "0"]);
-  for (const t of ["SCWs", "Agents", "Gates", "Memory", "Ledger", "Plan"]) { await p.locator("#nav button", { hasText: t }).first().click(); assert.ok((await p.$$("#view > *")).length > 0, t); assert.ok(!/\b(null|undefined|NaN)\b/.test(await p.textContent("#m0")), "stray null/undefined on " + t); }
+test("blank: three default agents, only SCW0, nothing to run, no script errors", async () => {
+  const { b, p, errors } = await open({});
+  assert.deepEqual(await p.$$eval("#pal .agent", (e) => e.map((x) => x.textContent)), ["Maxey1 · maker", "Maxey2 · checker", "Maxey3 · judge"]);
+  assert.equal(await p.locator("#tree .scw").count(), 1);
+  assert.match(await p.textContent("#order"), /Nothing to run yet/);
+  await p.click("#run"); assert.match(await p.textContent("#err"), /Add at least one step/); assert.equal((await sent(p)).length, 0);
   assert.deepEqual(errors, []); await b.close();
 });
-test("memory tab shows exactly the five typed tiers, no L1-L4", async () => {
-  const { b, p } = await open(example());
-  await p.locator("#nav button", { hasText: "Memory" }).click();
-  const txt = await p.textContent("#view");
-  for (const t of ["working", "episodic", "semantic", "persistent", "procedural"]) assert.ok(txt.includes(t), t);
-  assert.ok(!/L[1-4]\b/.test(txt)); await b.close();
+test("Human0's workflow text draws 5 nested worlds, 6 steps and 2 run stages", async () => {
+  const { b, p, errors } = await open({ input: EXAMPLE });
+  assert.equal(await p.locator("#tree .scw").count(), 5);
+  assert.equal(await steps(p).count(), 6);
+  assert.equal(await p.locator("#order .stage").count(), 2);
+  assert.equal(await world(p, "scw5").locator(".scw").count(), 2, "SCW30 and SCW31 sit inside SCW5");
+  assert.equal(await world(p, "scw0").locator(":scope > .scw").count(), 2, "SCW5 and SCW32 sit directly in SCW0");
+  assert.match(await world(p, "scw5").locator(":scope > .card").first().textContent(), /Saves to SCW5/);
+  assert.deepEqual(errors, []); await b.close();
 });
-test("new SCW: empty and duplicate names rejected, valid one staged and applied", async () => {
-  const { b, p } = await open(example());
-  await btn(p, "Add").click(); assert.equal(await p.textContent("#err"), "Enter a name first");
-  await p.fill('input[placeholder="Research notes"]', "maker"); await btn(p, "Add").click();
-  assert.equal(await p.textContent("#err"), "That name's already taken");
-  assert.equal(await p.locator("text=Apply edits").count(), 0);
-  await p.fill('input[placeholder="Research notes"]', "Launch"); await btn(p, "Add").click();
-  assert.equal(await p.textContent("#err"), "");
-  await btn(p, "Apply edits").click();
-  const [m] = await sent(p); assert.ok(m.startsWith("Maxey0: apply "));
-  const st = JSON.parse(m.slice("Maxey0: apply ".length));
-  assert.equal(st.scws.length, 4); assert.equal(st.scws[3].id, "SCW4"); assert.deepEqual(st.scws[3].tiers, ["working"]);
-  await b.close();
+test("typing a workflow and pressing Visualize draws it; empty text is refused", async () => {
+  const { b, p } = await open({});
+  await p.click("#viz"); assert.match(await p.textContent("#err"), /Add a task/);
+  await p.fill("#txt", "In scw1: draft the plan /deep-research\nIn scw2: review the plan");
+  await p.click("#viz");
+  assert.equal(await steps(p).count(), 2); assert.equal(await p.locator("#order .stage").count(), 2);
+  assert.match(await p.textContent("#err"), /Drew 3 worlds and 2 steps/); await b.close();
 });
-test("agent binding, gate add/remove and tier toggles are staged into apply", async () => {
-  const { b, p } = await open(example());
-  await p.locator("#nav button", { hasText: "Agents" }).click();
-  await p.locator(".card", { hasText: "Maxey3" }).getByRole("button", { name: "Maker" }).click();
-  await p.locator("#nav button", { hasText: "Gates" }).click();
-  await btn(p, "Add").click(); assert.equal(await p.textContent("#err"), "Describe the rule first");
-  await p.fill('input[placeholder="Send anything outside this world"]', "Use web search"); await btn(p, "Add").click();
-  await p.getByRole("button", { name: "Remove gate" }).first().click();
-  await p.locator("#nav button", { hasText: "Memory" }).click();
-  await p.locator(".card", { hasText: "Maker tier access" }).getByRole("button", { name: "procedural" }).click();
-  await btn(p, "Apply edits").click();
-  const st = JSON.parse((await sent(p))[0].slice(14));
-  assert.deepEqual(st.agents.find(a => a.name === "Maxey3").scws, ["SCW2", "SCW1"]);
-  assert.equal(st.gates.length, 2); assert.equal(st.gates[1].rule, "Use web search");
-  assert.ok(st.scws[0].tiers.includes("procedural")); await b.close();
+test("tap an agent then a step places it; tapping the step again removes it", async () => {
+  const { b, p } = await open({ input: EXAMPLE });
+  await p.locator("#pal .agent", { hasText: "Maxey1" }).click();
+  assert.equal(await p.locator("#pal .agent.pick").count(), 1);
+  await steps(p).first().locator(".slot").click();
+  assert.equal(await steps(p).first().locator(".slot").textContent(), "Maxey1 ×");
+  assert.equal(await p.locator("#pal .agent.pick").count(), 0);
+  await steps(p).first().locator(".slot").click();
+  assert.equal(await steps(p).first().locator(".slot").textContent(), "Drop an agent"); await b.close();
 });
-test("run plan validates goal and sends goal + agents", async () => {
-  const { b, p } = await open(example());
-  await p.locator("#nav button", { hasText: "Plan" }).click();
-  await btn(p, "Run plan").click(); assert.equal(await p.textContent("#err"), "Describe the goal first");
-  await p.fill("textarea", "Draft and check the README");
-  await btn(p, "Run plan").click();
-  const m = (await sent(p))[0]; assert.ok(m.startsWith("Maxey0: run "));
-  const r = JSON.parse(m.slice(12)); assert.equal(r.goal, "Draft and check the README"); assert.deepEqual(r.agents, ["Maxey1", "Maxey2", "Maxey3"]); assert.equal(r.state, undefined);
-  await b.close();
+test("drag an agent onto a step places it; a drop with no agent changes nothing", async () => {
+  // Tall viewport: a simulated drag only reaches targets that are on screen.
+  const { b, p } = await open({ input: EXAMPLE }, { height: 2400 });
+  await p.locator("#pal .agent", { hasText: "Maxey2" }).dragTo(steps(p).nth(1).locator(".slot"));
+  assert.equal(await steps(p).nth(1).locator(".slot").textContent(), "Maxey2 ×");
+  await steps(p).nth(1).locator(".slot").dispatchEvent("drop", { dataTransfer: await p.evaluateHandle(() => new DataTransfer()) });
+  assert.equal(await steps(p).nth(1).locator(".slot").textContent(), "Maxey2 ×"); await b.close();
 });
-test("hostile strings in state render as text and cannot break out of the script", async () => {
-  const s = example(); s.scws[0].name = '<img src=x onerror="window.pwned=1">'; s.scws[1].purpose = "</script><script>window.pwned=2</script>";
+test("Run sends the plan with agents, order and a loop", async () => {
+  const { b, p } = await open({ input: EXAMPLE });
+  await p.locator("#pal .agent", { hasText: "Maxey1" }).click(); await steps(p).first().locator(".slot").click();
+  await steps(p).first().getByRole("checkbox").check();
+  const r = await runPayload(p);
+  assert.equal(r.steps.length, 6); assert.equal(r.scws.length, 5); assert.equal(r.agents.length, 3);
+  assert.equal(r.steps[0].agent, "Maxey1"); assert.deepEqual(r.steps[0].loop, { checker: "Maxey2", max: 3 });
+  const pdf = r.steps.find((s) => s.scw === "scw5"); assert.deepEqual(pdf.skills, ["research-paper-pdf"]);
+  assert.deepEqual(pdf.after, r.steps.filter((s) => s.scw === "scw30").map((s) => s.id)); await b.close();
+});
+test("add agent inline; duplicate and empty names refused", async () => {
+  const { b, p } = await open({});
+  await p.click("#aa"); assert.match(await p.textContent("#err"), /Enter an agent name/);
+  await p.fill("#an", "maxey1"); await p.click("#aa"); assert.match(await p.textContent("#err"), /already taken/);
+  await p.fill("#an", "Scout"); await p.fill("#ar", "researcher"); await p.click("#aa");
+  assert.equal(await p.locator("#pal .agent").count(), 4); assert.match(await p.textContent("#pal"), /Scout · researcher/); await b.close();
+});
+test("add a world and a step, change when a step starts, remove a world with its steps", async () => {
+  const { b, p } = await open(example());
+  assert.equal(await p.locator("#order .stage").count(), 2);
+  await world(p, "scw0").locator(":scope > .row button", { hasText: "+ world inside" }).click();
+  assert.equal(await p.locator("#tree .scw").count(), 4);
+  await world(p, "scw3").locator(":scope > .row button", { hasText: "+ step" }).click();
+  assert.equal(await steps(p).count(), 3);
+  await world(p, "scw2").locator(":scope > .card select").first().selectOption("");
+  assert.equal(await p.locator("#order .stage").count(), 1, "the PDF step now starts at once");
+  await world(p, "scw1").locator(":scope > .row button[aria-label='Remove world']").click();
+  assert.equal(await steps(p).count(), 2); assert.equal(await p.locator("#tree .scw").count(), 3);
+  const r = await runPayload(p);
+  assert.equal(r.steps.length, 1, "the new empty step is not sent"); assert.equal(r.steps[0].scw, "scw2"); await b.close();
+});
+test("monitoring: statuses and results from a run are shown", async () => {
+  const s = example(); s.run = "P-1"; s.steps[0].status = "done"; s.steps[0].result = "Paper saved to Research"; s.steps[1].status = "running";
+  const { b, p } = await open(s);
+  assert.match(await p.textContent("#sum"), /P-1: 1 of 2 done, 1 running/);
+  assert.equal(await p.locator("#order .st-done").count(), 1); assert.equal(await p.locator("#order .st-running").count(), 1);
+  assert.match(await steps(p).first().textContent(), /done\s*Paper saved to Research/); await b.close();
+});
+test("hostile strings render as text", async () => {
+  const s = example(); s.scws[1].name = '<img src=x onerror="window.pwned=1">'; s.steps[0].task = "</script><script>window.pwned=2</script>";
   const { b, p, errors } = await open(s);
-  assert.equal(await p.evaluate(() => window.pwned), undefined);
-  assert.ok((await p.textContent("#view")).includes("<img src=x")); assert.deepEqual(errors, []); await b.close();
+  assert.equal(await p.evaluate(() => window.pwned), undefined); assert.deepEqual(errors, []); await b.close();
 });
-test("empty state renders (fresh user)", async () => {
-  const { b, p, errors } = await open({ schema: "maxey0.state/2", world: "SCW0", rev: 0 });
-  assert.deepEqual(await p.$$eval("#mets .met b", e => e.map(x => x.textContent)), ["0", "0", "0", "0"]);
-  for (const t of ["Agents", "Gates", "Memory", "Ledger", "Plan"]) await p.locator("#nav button", { hasText: t }).first().click();
-  assert.deepEqual(errors, []); await b.close();
-});
-for (const dark of [false, true]) test(`no horizontal overflow at 380px (${dark ? "dark" : "light"})`, async () => {
-  const s = example(); s.ledger = [{ at: "2026-10-14T21:40:00Z", agent: "Maxey2", scw: "SCW1", op: "read", result: "refused" }];
-  const { b, p } = await open(s, { dark });
-  for (const t of ["SCWs", "Agents", "Gates", "Memory", "Ledger", "Plan"]) {
-    await p.locator("#nav button", { hasText: t }).first().click();
-    assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), t);
-    if (process.env.SHOTS) await p.screenshot({ path: `${process.env.SHOTS}/${dark ? "dark" : "light"}-${t}.png`, fullPage: true });
-  }
+for (const dark of [false, true]) test(`380px ${dark ? "dark" : "light"}: no horizontal overflow, no stray null/undefined`, async () => {
+  const { b, p } = await open({ input: EXAMPLE }, { dark });
+  assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+  assert.ok(!/\b(null|undefined|NaN)\b/.test(await p.textContent("#m0")));
+  if (process.env.SHOTS) await p.screenshot({ path: `${process.env.SHOTS}/${dark ? "dark" : "light"}.png`, fullPage: true });
   await b.close();
 });

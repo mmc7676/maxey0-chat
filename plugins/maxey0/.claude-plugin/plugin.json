@@ -1,7 +1,17 @@
 {
   "name": "maxey0",
-  "version": "2.0.0",
-  "description": "Maxey0 and Structured Context Worlds (SCWs) with an inline dashboard in the chat. No connector or server required; an optional remote MCP server adds server-enforced scope.",
-  "author": { "name": "Mike Cohan (Human0)", "email": "human@maxey0.com" },
-  "keywords": ["maxey0", "scw", "structured-context-worlds", "multi-agent", "orchestration", "dashboard"]
+  "version": "3.0.0",
+  "description": "Maxey0 workflow builder: set up Structured Context Worlds (SCWs), agents and workflows in an inline dashboard or by typing, then run and monitor them from the chat.",
+  "author": {
+    "name": "Mike Cohan (Human0)",
+    "email": "human@maxey0.com"
+  },
+  "keywords": [
+    "maxey0",
+    "scw",
+    "structured-context-worlds",
+    "agents",
+    "workflows",
+    "dashboard"
+  ]
 }

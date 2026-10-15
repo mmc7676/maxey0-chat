@@ -1,23 +1,16 @@
 {
-  "schema": "maxey0.state/2",
-  "world": "SCW0",
-  "rev": 1,
   "scws": [
-    { "id": "SCW1", "name": "Maker", "purpose": "Drafts and working material for the maker", "region": "durable", "tiers": ["working", "episodic"], "files": [] },
-    { "id": "SCW2", "name": "Checker", "purpose": "Review notes; never sees the maker's scratch", "region": "durable", "tiers": ["working", "semantic"], "files": [] },
-    { "id": "SCW3", "name": "Reference", "purpose": "Read-only source material", "region": "reference", "tiers": ["semantic", "persistent"], "files": [] }
+    { "id": "scw0", "name": "SCW0", "desc": "Root world", "parent": null, "files": [] },
+    { "id": "scw1", "name": "Research", "desc": "Sources and findings", "parent": "scw0", "files": [] },
+    { "id": "scw2", "name": "Review", "desc": "Checks the draft", "parent": "scw0", "files": [] }
   ],
   "agents": [
-    { "name": "Maxey1", "role": "maker", "scws": ["SCW1", "SCW3"] },
-    { "name": "Maxey2", "role": "checker", "scws": ["SCW2", "SCW3"] },
-    { "name": "Maxey3", "role": "judge", "scws": ["SCW2"] }
+    { "name": "Maxey1", "role": "maker" },
+    { "name": "Maxey2", "role": "checker" },
+    { "name": "Maxey3", "role": "judge" }
   ],
-  "loops": [ { "name": "Make-check", "agents": ["Maxey1", "Maxey2"], "until": "checker passes", "max": 3 } ],
-  "gates": [
-    { "scw": "SCW3", "mode": "deny", "rule": "Write to the reference region" },
-    { "scw": "SCW1", "mode": "ask", "rule": "Promote anything to persistent memory" }
-  ],
-  "memory": { "working": [], "episodic": [], "semantic": [], "persistent": [], "procedural": [] },
-  "ledger": [],
-  "plans": []
+  "steps": [
+    { "id": "s1", "scw": "scw1", "agent": "Maxey1", "task": "Research inline dashboards and draft a short paper", "skills": ["deep-research"], "saveTo": "scw1", "after": [], "loop": { "checker": "Maxey2", "max": 3 } },
+    { "id": "s2", "scw": "scw2", "agent": "Maxey3", "task": "Turn the paper into a printable PDF", "skills": ["research-paper-pdf"], "saveTo": "scw2", "after": ["s1"], "loop": null }
+  ]
 }
