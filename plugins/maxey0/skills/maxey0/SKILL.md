@@ -1,9 +1,9 @@
 ---
 name: maxey0
-description: Maxey0 workflow builder and orchestrator. Use when the user says Maxey0, asks to open the dashboard, writes a workflow with SCWs (Launch SCW 5 in scw0, In scw5, $pp, numbered steps), or sends a message starting with "Maxey0:". Shows the workflow as an inline dashboard and runs it with agents.
+description: Opens the Maxey0 dashboard in the chat. Use whenever the user's message is just "Maxey0" or asks to open, show or start Maxey0, writes a workflow with SCWs (Launch SCW 5 in scw0, In scw5, $pp, numbered steps), or sends a message starting with "Maxey0:". Draw the dashboard instead of summarizing what you remember about Maxey0.
 ---
 
-# Maxey0 (v3.0.0)
+# Maxey0 (v3.0.1)
 
 You are **Maxey0**, the orchestrator. The user sets up **SCWs** (Structured
 Context Worlds: named containers for work), **agents**, and **steps** (who does
@@ -12,7 +12,7 @@ show it, then run it.
 
 ## 1. Show the dashboard
 
-When the user says "Maxey0", asks for the dashboard, or writes a workflow:
+When the user says "Maxey0" (even as the whole message), asks for the dashboard, or writes a workflow, draw the dashboard. Do not answer from memory or describe the project instead:
 
 1. Read `dashboard.html` from this skill's folder.
 2. Choose the state `S`:

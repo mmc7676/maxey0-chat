@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.1 (2026-10-14)
+- The `maxey0` skill now says to draw the dashboard when the message is just "Maxey0", instead of summarizing remembered project facts (seen on mobile).
+- Plugin README: chat has no slash command; type Maxey0.
+
 ## 3.0.0 (2026-10-14)
 
 ### Plugin `maxey0` 3.0.0

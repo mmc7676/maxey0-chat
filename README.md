@@ -1,6 +1,6 @@
 # Maxey0 · Structured Context Worlds
 
-Maxey0 and its Structured Context Worlds (SCWs), packaged for Claude. Version 3.0.0, 2026-10-14.
+Maxey0 and its Structured Context Worlds (SCWs), packaged for Claude. Version 3.0.1, 2026-10-14.
 
 An SCW (Structured Context World) is a named container for a piece of work: a description, files, and the steps that run in it. SCWs can sit inside other SCWs. Maxey0 is the orchestrator: you set up SCWs, agents and workflows in an inline dashboard or by typing, and Maxey0 runs them with agents and shows their progress.
 
@@ -15,7 +15,7 @@ An SCW (Structured Context World) is a named container for a piece of work: a de
 
 ### Claude app (web, desktop, iPhone, Android)
 
-1. Download [`dist/maxey0-plugin-v3.0.0.zip`](https://github.com/mmc7676/maxey0-chat/raw/main/dist/maxey0-plugin-v3.0.0.zip). Use this file, not GitHub's green **Code > Download ZIP**: that archive is the whole repository, and Claude rejects it because the plugin is not at its top level.
+1. Download [`dist/maxey0-plugin-v3.0.1.zip`](https://github.com/mmc7676/maxey0-chat/raw/main/dist/maxey0-plugin-v3.0.1.zip). Use this file, not GitHub's green **Code > Download ZIP**: that archive is the whole repository, and Claude rejects it because the plugin is not at its top level.
 2. On claude.ai in a browser, go to Customize > Plugins > Add plugin and upload it. Uploads sync to the mobile apps.
 3. In any chat, say **Maxey0** or **show my SCWs**. The dashboard appears in the conversation.
 
