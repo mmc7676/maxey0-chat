@@ -15,11 +15,11 @@ An SCW is a named, bounded context world with explicit rules for what may enter 
 
 ### Claude app (web, desktop, iPhone, Android)
 
-1. Download `maxey0-plugin-v2.0.0.zip` from the release.
-2. On claude.ai in a browser, upload it where you add plugins or skills (Customize). Uploads sync to the mobile apps.
+1. Download [`dist/maxey0-plugin-v2.0.0.zip`](https://github.com/mmc7676/maxey0-chat/raw/main/dist/maxey0-plugin-v2.0.0.zip). Use this file, not GitHub's green **Code > Download ZIP**: that archive is the whole repository, and Claude rejects it because the plugin is not at its top level.
+2. On claude.ai in a browser, go to Customize > Plugins > Add plugin and upload it. Uploads sync to the mobile apps.
 3. In any chat, say **Maxey0** or **show my SCWs**. The dashboard appears in the conversation.
 
-If your account only accepts skills, upload `maxey0-skill-v2.0.0.zip` and `scw-skill-v2.0.0.zip` instead.
+If your account only accepts skills, upload `dist/maxey0-skill-v2.0.0.zip` and `dist/scw-skill-v2.0.0.zip` instead. Checksums are in `dist/SHA256SUMS`.
 
 ### Claude Code (terminal, web or mobile)
 
