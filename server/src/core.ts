@@ -2,14 +2,17 @@
 // Runtime-neutral: takes a Request and a Store, returns a Response (Cloudflare Workers, Node 18+, tests).
 import { Store, Workspace, Scw, Agent, Loop, Gate, Plan, ScwFile, ScwEvent } from "./store";
 import { DASHBOARD_HTML } from "./ui-html";
+import { ARTIFACTS_HTML } from "./artifacts-ui-html";
+import { ArtifactMeta, ArtifactKind, ARTIFACT_KINDS, RESOURCE_DOMAINS, checkArtifact, kindOf, sha256Hex } from "./artifacts";
 
 export const SERVER_INFO = { name: "maxey0", title: "Maxey0 · SCWs", version: "1.0.0" };
 export const UI_URI = "ui://maxey0/dashboard.html";
 export const UI_MIME = "text/html;profile=mcp-app";
+export const ARTIFACTS_UI_URI = "ui://maxey0/artifacts.html";
 const SUPPORTED_VERSIONS = ["2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26"];
 const MAX_FILE_BYTES = 4 * 1024 * 1024;     // per file (KV allows 25 MB; kept small for tool payloads)
 const MAX_READ_CHARS = 100_000;             // keeps tool results well under Claude's ~150k-char hydration limit
-const LIMITS = { scws: 50, filesPerScw: 100, agents: 50, loops: 50, gates: 100, plans: 200 };
+const LIMITS = { scws: 50, filesPerScw: 100, agents: 50, loops: 50, gates: 100, plans: 200, artifacts: 1000 };
 
 type Json = Record<string, any>;
 const uid = (p: string) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
@@ -22,6 +25,9 @@ export class ToolError extends Error {}
 // ---------------------------------------------------------------- tool catalogue
 const uiMeta = { ui: { resourceUri: UI_URI }, "ui/resourceUri": UI_URI };
 const appOnly = { ui: { resourceUri: UI_URI, visibility: ["app"] } };
+const artifactsUi = { ui: { resourceUri: ARTIFACTS_UI_URI }, "ui/resourceUri": ARTIFACTS_UI_URI };
+const artifactsAppOnly = { ui: { resourceUri: ARTIFACTS_UI_URI, visibility: ["app"] } };
+const ARTIFACT_ID = /^[A-Za-z0-9._-]{1,80}$/;
 
 export const TOOLS: Json[] = [
   {
@@ -78,6 +84,47 @@ export const TOOLS: Json[] = [
     inputSchema: { type: "object", properties: { action: { type: "string" }, payload: { type: "object" } }, required: ["action"] },
     _meta: appOnly,
   },
+  {
+    name: "maxey0_open_artifacts",
+    title: "Open Maxey0 artifacts as tiles",
+    description: "Opens the Maxey0 artifacts board in the chat: every stored artifact (apps, dashboards, diagrams, documents) as a live tile that can be expanded. Use when the user wants to see, open, run or browse their artifacts. Optional query and kind narrow what is shown.",
+    inputSchema: { type: "object", properties: { query: { type: "string" }, kind: { type: "string", enum: ARTIFACT_KINDS }, ids: { type: "array", items: { type: "string" }, description: "Show only these artifact ids, in this order." } } },
+    annotations: { readOnlyHint: true },
+    _meta: artifactsUi,
+  },
+  {
+    name: "artifact_list",
+    title: "List stored artifacts",
+    description: "Search the stored artifacts by words in their title, description or source chat, optionally filtered by kind or SCW. Returns metadata and check results, never the code.",
+    inputSchema: { type: "object", properties: { query: { type: "string" }, kind: { type: "string", enum: ARTIFACT_KINDS }, scwId: { type: "string" }, limit: { type: "integer", minimum: 1, maximum: 200 }, offset: { type: "integer", minimum: 0 } } },
+    annotations: { readOnlyHint: true },
+  },
+  {
+    name: "artifact_upsert",
+    title: "Store or update an artifact",
+    description: "Store an artifact's full code as a versioned object (a new id creates it, an existing id adds a version). Runs the mechanical checks (not empty, size, loadable imports and default export for React, allowed hosts for HTML) and returns the result; status is failed if any check fails. To show it, call maxey0_open_artifacts with its id.",
+    inputSchema: { type: "object", properties: {
+      id: { type: "string", description: "Letters, digits, dot, dash, underscore; up to 80. Omit to create a new artifact." },
+      title: { type: "string" }, kind: { type: "string", description: "html, react, svg, mermaid, markdown, code or text (MIME types such as application/vnd.ant.react also accepted)" },
+      code: { type: "string" }, description: { type: "string" }, scwId: { type: "string", description: "SCW id or name that owns this artifact" },
+      source: { type: "object", properties: { type: { type: "string", enum: ["chat", "file", "published", "built"] }, chatUrl: { type: "string" }, chatTitle: { type: "string" }, originId: { type: "string" } } },
+      asAgent: { type: "string", description: "Agent writing it. Scope-checked against scwId." } }, required: ["title", "kind", "code"] },
+  },
+  {
+    name: "artifact_get",
+    title: "Load an artifact's code (dashboard)",
+    description: "Dashboard-only: returns one artifact's code in chunks for its tile.",
+    inputSchema: { type: "object", properties: { id: { type: "string" }, offset: { type: "integer", minimum: 0 } }, required: ["id"] },
+    annotations: { readOnlyHint: true },
+    _meta: artifactsAppOnly,
+  },
+  {
+    name: "artifact_report_render",
+    title: "Record a tile's render result (dashboard)",
+    description: "Dashboard-only: records whether an artifact's tile rendered or failed, with the error.",
+    inputSchema: { type: "object", properties: { id: { type: "string" }, version: { type: "integer" }, ok: { type: "boolean" }, detail: { type: "string" } }, required: ["id", "version", "ok"] },
+    _meta: artifactsAppOnly,
+  },
 ];
 
 // ---------------------------------------------------------------- helpers
@@ -92,6 +139,7 @@ function summary(w: Workspace): string {
   for (const a of w.agents) lines.push(`- Agent "${a.name}" (${a.id}) role: ${a.role || "-"}; SCWs: ${a.scwIds.join(", ") || "none"}`);
   for (const l of w.loops) lines.push(`- Loop "${l.name}" (${l.id}): agents ${l.agentIds.join(" → ")}; max ${l.maxIterations} iterations; until: ${l.until || "-"}`);
   for (const g of w.gates) lines.push(`- Gate (${g.id}) on SCW ${g.scwId}: ${g.mode.toUpperCase()} ${g.rule}`);
+  if (w.artifacts?.length) lines.push(`- Artifacts: ${w.artifacts.length} stored (${w.artifacts.filter((a) => a.status === "failed").length} failing checks). Use artifact_list to search them.`);
   const recent = w.plans.slice(-5);
   for (const p of recent) lines.push(`- Plan ${p.id}: ${p.status} — ${p.goal.slice(0, 120)}`);
   return lines.join("\n");
@@ -193,6 +241,33 @@ export async function callTool(store: Store, wsId: string, baseUrl: string, name
     }
     case "maxey0_ui_action":
       return uiAction(store, w, baseUrl, String(args.action), (args.payload ?? {}) as Json);
+    case "maxey0_open_artifacts": {
+      const shown = listArtifacts(w, args, 200);
+      return text(`Opened the Maxey0 artifacts board: ${shown.total} artifact(s)${args.query ? ` matching "${str(args.query, 80)}"` : ""}.`, { artifacts: shown.items, total: shown.total, query: str(args.query, 200) || null, kind: args.kind ?? null, ids: Array.isArray(args.ids) ? strArr(args.ids) : null });
+    }
+    case "artifact_list": {
+      const { items, total } = listArtifacts(w, args, Math.max(1, Math.min(200, Number(args.limit) || 50)), Math.max(0, Number(args.offset) || 0));
+      const lines = items.map((a) => `- ${a.title} [${a.kind}] id=${a.id} v${a.version} ${a.status}${a.render ? (a.render.ok ? ", rendered" : `, render failed: ${a.render.detail}`) : ""}${a.source.chatUrl ? ` from ${a.source.chatUrl}` : ""}`);
+      return text(`${total} artifact(s) match; showing ${items.length}.\n${lines.join("\n")}`, { artifacts: items, total });
+    }
+    case "artifact_upsert": return upsertArtifact(store, w, args, text);
+    case "artifact_get": {
+      const a = (w.artifacts ?? []).find((x) => x.id === args.id);
+      if (!a) throw new ToolError(`No artifact ${args.id}.`);
+      const code = await store.getFile(w.id, artifactKey(a.id));
+      if (code == null) throw new ToolError("Artifact content is missing from storage.");
+      const off = Math.max(0, Number(args.offset) || 0);
+      const chunk = code.slice(off, off + MAX_READ_CHARS);
+      return text(`${a.title}: characters ${off}-${off + chunk.length} of ${code.length}.`, { artifact: a, code: chunk, offset: off, total: code.length, done: off + chunk.length >= code.length });
+    }
+    case "artifact_report_render": {
+      const a = (w.artifacts ?? []).find((x) => x.id === args.id);
+      if (!a) throw new ToolError(`No artifact ${args.id}.`);
+      if (Number(args.version) !== a.version) return text(`Ignored: report for version ${args.version}, current is ${a.version}.`);
+      a.render = { ok: !!args.ok, detail: str(args.detail, 500), at: now() };
+      await store.putWorkspace(w);
+      return text(`Recorded: ${a.title} ${a.render.ok ? "rendered" : "failed to render"}.`, { artifact: a });
+    }
   }
   throw new ToolError(`Unknown tool: ${name}`);
 }
@@ -268,6 +343,55 @@ async function uiAction(store: Store, w: Workspace, baseUrl: string, action: str
   throw new ToolError(`Unknown dashboard action: ${action}`);
 }
 
+// ---------------------------------------------------------------- artifacts
+const artifactKey = (id: string) => `art-${id}`;
+
+function listArtifacts(w: Workspace, args: Json, limit: number, offset = 0) {
+  let all = [...(w.artifacts ?? [])];
+  const ids = Array.isArray(args.ids) ? strArr(args.ids) : null;
+  if (ids) all = ids.map((id) => all.find((a) => a.id === id)).filter((a): a is ArtifactMeta => !!a);
+  if (args.kind) all = all.filter((a) => a.kind === args.kind);
+  if (args.scwId) { const s = findScw(w, String(args.scwId)); all = all.filter((a) => a.scwId === s.id); }
+  const terms = str(args.query, 200).toLowerCase().split(/\s+/).filter(Boolean);
+  if (terms.length) all = all.filter((a) => { const hay = `${a.title} ${a.description} ${a.source.chatTitle ?? ""} ${a.kind}`.toLowerCase(); return terms.every((t) => hay.includes(t)); });
+  if (!ids) all.sort((x, y) => (y.updatedAt > x.updatedAt ? 1 : y.updatedAt < x.updatedAt ? -1 : 0));
+  return { total: all.length, items: all.slice(offset, offset + limit) };
+}
+
+async function upsertArtifact(store: Store, w: Workspace, args: Json, text: (t: string, sc?: Json) => Json): Promise<Json> {
+  const code = typeof args.code === "string" ? args.code : "";
+  const kind: ArtifactKind = kindOf(String(args.kind ?? ""));
+  const title = str(args.title, 200) || "Untitled artifact";
+  const id = args.id === undefined || args.id === null || args.id === "" ? uid("art") : String(args.id);
+  if (!ARTIFACT_ID.test(id)) throw new ToolError(`Invalid artifact id "${id}": use letters, digits, dot, dash or underscore, up to 80.`);
+  const arts = (w.artifacts ??= []);
+  let scwId: string | null = null;
+  if (args.scwId) { const s = findScw(w, String(args.scwId)); scwId = s.id; await scopeCheck(store, w, args.asAgent, s, "write"); }
+  const checks = checkArtifact(kind, code);
+  const failed = checks.filter((c) => !c.ok);
+  if (failed.some((c) => c.name === "size")) throw new ToolError(`Artifact too large: ${failed.find((c) => c.name === "size")!.detail}.`);
+  const sha256 = await sha256Hex(code);
+  const ex = arts.find((a) => a.id === id);
+  if (!ex && arts.length >= LIMITS.artifacts) throw new ToolError(`Artifact limit reached (${LIMITS.artifacts}).`);
+  const src = (args.source ?? {}) as Json;
+  const source = { type: (["chat", "file", "published", "built"].includes(src.type) ? src.type : "built") as ArtifactMeta["source"]["type"],
+    ...(str(src.chatUrl, 300) ? { chatUrl: str(src.chatUrl, 300) } : {}), ...(str(src.chatTitle, 200) ? { chatTitle: str(src.chatTitle, 200) } : {}), ...(str(src.originId, 300) ? { originId: str(src.originId, 300) } : {}) };
+  const t = now();
+  if (ex && ex.sha256 === sha256 && ex.kind === kind) {
+    ex.title = title; ex.description = str(args.description, 2000) || ex.description; ex.scwId = scwId ?? ex.scwId; ex.source = { ...ex.source, ...source };
+    await store.putWorkspace(w);
+    return text(`Unchanged code: ${ex.title} stays at version ${ex.version} (${ex.status}).`, { artifact: ex, changed: false });
+  }
+  await store.putFile(w.id, artifactKey(id), code);
+  const meta: ArtifactMeta = { id, title, kind, description: str(args.description, 2000), scwId, version: (ex?.version ?? 0) + 1,
+    size: new TextEncoder().encode(code).length, sha256, status: failed.length ? "failed" : "checked", checks, render: null, source,
+    createdAt: ex?.createdAt ?? t, updatedAt: t };
+  if (ex) Object.assign(ex, meta); else arts.push(meta);
+  await store.putWorkspace(w);
+  const msg = failed.length ? `Stored ${title} (${id}) v${meta.version}, but ${failed.length} check(s) failed: ${failed.map((c) => `${c.name}: ${c.detail}`).join("; ")}.` : `Stored ${title} (${id}) v${meta.version}; all ${checks.length} checks passed. Open it with maxey0_open_artifacts.`;
+  return text(msg, { artifact: ex ?? meta, changed: true });
+}
+
 // ---------------------------------------------------------------- JSON-RPC over HTTP
 const rpcResult = (id: unknown, result: Json) => ({ jsonrpc: "2.0", id, result });
 const rpcError = (id: unknown, code: number, message: string) => ({ jsonrpc: "2.0", id, error: { code, message } });
@@ -288,10 +412,11 @@ export async function handleRpc(store: Store, wsId: string, baseUrl: string, msg
       }
       case "ping": return rpcResult(id, {});
       case "tools/list": return rpcResult(id, { tools: TOOLS });
-      case "resources/list": return rpcResult(id, { resources: [{ uri: UI_URI, name: "Maxey0 dashboard", mimeType: UI_MIME, description: "Interactive Maxey0 SCW dashboard" }] });
+      case "resources/list": return rpcResult(id, { resources: [{ uri: UI_URI, name: "Maxey0 dashboard", mimeType: UI_MIME, description: "Interactive Maxey0 SCW dashboard" }, { uri: ARTIFACTS_UI_URI, name: "Maxey0 artifacts", mimeType: UI_MIME, description: "Stored artifacts as live tiles" }] });
       case "resources/templates/list": return rpcResult(id, { resourceTemplates: [] });
       case "prompts/list": return rpcResult(id, { prompts: [] });
       case "resources/read": {
+        if (params.uri === ARTIFACTS_UI_URI) return rpcResult(id, { contents: [{ uri: ARTIFACTS_UI_URI, mimeType: UI_MIME, text: ARTIFACTS_HTML, _meta: { ui: { prefersBorder: false, csp: { resourceDomains: RESOURCE_DOMAINS } } } }] });
         if (params.uri !== UI_URI) return rpcError(id, -32002, `Resource not found: ${params.uri}`);
         return rpcResult(id, { contents: [{ uri: UI_URI, mimeType: UI_MIME, text: DASHBOARD_HTML, _meta: { ui: { prefersBorder: false } } }] });
       }
