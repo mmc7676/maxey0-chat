@@ -20,6 +20,6 @@ Set up **SCWs** (Structured Context Worlds: named containers for work), **agents
 
 ## How it is built
 
-With the connector, `/maxey0` is one `maxey0_open_app` call; the server serves the app (`server/ui/app.ts` plus this folder's `app/maxey0.js`) as an MCP Apps view. Without it, Claude sends a 443-byte widget that loads `app/maxey0.js` from `cdn.jsdelivr.net`, pinned to commit `cd67cd404ae6e6f17a0710449a0bd87cffa7186e` of this repository.
+With the connector, `/maxey0` is one `maxey0_open_app` call; the server serves the app (`server/ui/app.ts` plus this folder's `app/maxey0.js`) as an MCP Apps view. Without it, Claude sends a 443-byte widget that loads `app/maxey0.js` from `cdn.jsdelivr.net`, pinned to commit `7c5713ef678d52285b76fc776ff38a0a4c4bcb7e` of this repository.
 
 `app/maxey0.js` is generated from `src/dashboard.src.html`, `src/parser.js` and `src/logo48.webp` by `tests/build-app.py`. Run `cd tests && npm install && npm test` to verify.
