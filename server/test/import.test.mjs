@@ -3,6 +3,7 @@ import { test } from "node:test"; import assert from "node:assert/strict";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs"; import { tmpdir } from "node:os"; import { join } from "node:path";
 import { handleRequest, KVStore, MemoryKV } from "../build/node.mjs";
 import { plan, runImport, stableId, kindOfRecord } from "../scripts/import-index.mjs";
+import { execFileSync } from "node:child_process"; import { fileURLToPath } from "node:url"; import { relative } from "node:path";
 
 const KEY = "import-key-0123456789abcdef";
 const server = () => { const store = new KVStore(new MemoryKV()); let id = 0;
@@ -52,4 +53,14 @@ test("import: counts match the index, failed checks are kept and marked, a secon
   const r2 = await runImport(p.chosen, call);
   assert.deepEqual(r2, { created: 0, updated: 0, unchanged: 5, checksFailed: 1, rejected: [] });
   assert.equal((await call("artifact_list", {})).structuredContent.total, 5);
+});
+
+test("command line: runs when started directly, by absolute and by relative path, and prints its plan", async () => {
+  const dir = fixture();
+  const script = fileURLToPath(new URL("../scripts/import-index.mjs", import.meta.url));
+  for (const path of [script, relative(process.cwd(), script)]) {
+    const out = execFileSync(process.execPath, [path, dir, "--dry-run"], { encoding: "utf8" });
+    assert.match(out, /5 of 6 index items selected \(apps only\)\./, `no output when started as ${path}`);
+  }
+  assert.throws(() => execFileSync(process.execPath, [script], { encoding: "utf8", stdio: "pipe" }), /usage/);
 });

@@ -9,7 +9,7 @@
 //
 // Ids are derived from the source chat and the item, so running it again updates the same
 // artifacts instead of adding copies. Unchanged code keeps its version.
-import { readFileSync } from "node:fs"; import { join } from "node:path"; import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs"; import { join, resolve } from "node:path"; import { createHash } from "node:crypto"; import { pathToFileURL } from "node:url";
 
 export const APP_KINDS = ["react", "html", "svg", "mermaid"];
 const KIND_BY_EXT = { tsx: "react", jsx: "react", html: "html", htm: "html", svg: "svg", mmd: "mermaid", md: "markdown" };
@@ -65,8 +65,13 @@ export function httpCaller(url) {
   };
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  const [dir, url, ...flags] = process.argv.slice(2);
+// Run as a command only when this file is the one Node was started with. Compare as file URLs:
+// on Windows argv[1] is "C:\\…\\import-index.mjs" while import.meta.url is "file:///C:/…", so a plain
+// string comparison never matches and the script would exit silently.
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+  const args = process.argv.slice(2);
+  const flags = args.filter((a) => a.startsWith("--"));
+  const [dir, url] = args.filter((a) => !a.startsWith("--"));
   if (!dir || (!url && !flags.includes("--dry-run"))) { console.error("usage: node scripts/import-index.mjs <index-dir> <mcp-url> [--all] [--dry-run]"); process.exit(2); }
   const p = plan(dir, { all: flags.includes("--all") });
   console.log(`${p.chosen.length} of ${p.total} index items selected (${flags.includes("--all") ? "all kinds" : "apps only"}).`);
