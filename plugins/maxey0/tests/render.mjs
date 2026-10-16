@@ -3,7 +3,7 @@ import fs from "node:fs"; import path from "node:path"; import { fileURLToPath }
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const WIDGET = fs.readFileSync(path.join(root, "skills", "maxey0", "widget.html"), "utf8");
 export const APP = fs.readFileSync(path.join(root, "app", "maxey0.js"), "utf8");
-export const CDN = /^https:\/\/cdn\.jsdelivr\.net\/gh\/mmc7676\/maxey0-chat@8629e4211fe64b29afab9619ab3df41736000d56\/plugins\/maxey0\/app\/maxey0\.js$/;
+export const CDN = /^https:\/\/cdn\.jsdelivr\.net\/gh\/mmc7676\/maxey0-chat@67e24cd02c007e7cf96fa48e6023b085a4ec9fd2\/plugins\/maxey0\/app\/maxey0\.js$/;
 export function renderWidget(state) {
   if (WIDGET.split("__STATE__").length !== 2) throw new Error("widget.html must contain __STATE__ exactly once");
   return WIDGET.replace("__STATE__", () => JSON.stringify(state).replace(/<\//g, "<\\/"));
