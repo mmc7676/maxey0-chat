@@ -1,5 +1,6 @@
 // Storage for Maxey0 workspaces. One workspace = one JSON document plus one record per file.
 // Cloudflare: KVStore over a KV namespace. Local/tests: MemoryStore (optionally persisted to disk by the Node runner).
+import type { ArtifactMeta } from "./artifacts";
 
 export interface ScwFile { id: string; name: string; mime: string; size: number; encoding: "text" | "base64"; region: "reference" | "durable"; addedBy: "dashboard" | "upload-link" | "claude" | "agent"; addedAt: string }
 export interface Scw { id: string; name: string; description: string; files: ScwFile[]; createdAt: string }
@@ -8,7 +9,7 @@ export interface Loop { id: string; name: string; agentIds: string[]; maxIterati
 export interface Gate { id: string; scwId: string; rule: string; mode: "allow" | "deny" | "ask" }
 export interface Plan { id: string; goal: string; scwIds: string[]; agentIds: string[]; loopIds: string[]; gateIds: string[]; status: "submitted" | "running" | "done" | "failed"; createdAt: string; runLog: { at: string; status: string; summary: string }[] }
 export interface ScwEvent { at: string; kind: "read" | "write" | "denied"; agent: string | null; scw: string; detail: string }
-export interface Workspace { id: string; scws: Scw[]; agents: Agent[]; loops: Loop[]; gates: Gate[]; plans: Plan[]; events?: ScwEvent[]; updatedAt: string }
+export interface Workspace { id: string; scws: Scw[]; agents: Agent[]; loops: Loop[]; gates: Gate[]; plans: Plan[]; events?: ScwEvent[]; artifacts?: ArtifactMeta[]; updatedAt: string }
 
 export interface Store {
   getWorkspace(ws: string): Promise<Workspace>;
