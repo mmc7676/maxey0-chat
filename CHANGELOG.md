@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.1 (2026-10-16)
+Fixes from the first run on a phone.
+- **Import tray:** search results are listed in full in the page, 12 at a time, with a **Show N more** button that also fetches the next page from the server. Before, results sat in a 132-pixel box with its own scrollbar, which phones don't scroll inside the chat, so only the first 3 could be picked.
+- **Handshake:** both views (the app and the artifacts board) now open with the exact `ui/initialize` fields the MCP Apps spec requires (`appInfo`, `appCapabilities`, `protocolVersion`). They sent `clientInfo` and an extra `capabilities`, which a strict host rejects, leaving the view blank; the test hosts are now strict and fail on the old form. Both views also report their size right after the handshake.
+- **Tiles on phones:** 420 px tall (640 px expanded) on screens up to 600 px wide, up from 300.
+- Unchanged: Expand (wider and taller inside the app), Full screen (the tile fills the app in Claude's full-screen mode), Open outside ↗ (the artifact alone in a browser window).
+- **One version everywhere:** the connector, both views, the builder, the skill, the plugin, the marketplace entry and both READMEs carry the same number; the views read it from `server/package.json` at build time, and a test fails if any part differs.
+- Tests: connector 29; app in a browser 11 with a strict host; artifacts board 10 with a strict host; plugin 27.
+
 ## 0.3.0 (2026-10-16)
 One version for the plugin, the connector and the app, restarting at 0.3.0. Everything below this entry (1.0.0 to 3.3.1) is earlier work under the old numbering and is included here.
 - **Maxey0 app with artifact tiles (connector).** `/maxey0` now opens one view, served by the connector (`maxey0_open_app`, `ui://maxey0/app.html`), holding the workflow builder and an **Artifacts** section:

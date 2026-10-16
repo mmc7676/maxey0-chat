@@ -25,6 +25,8 @@ interface Slot {
 const slots: Slot[] = [];
 let tray: ArtifactMeta[] = [];
 let trayTotal = 0;
+const TRAY_PAGE = 12;
+let trayShown = TRAY_PAGE;
 let pick: string | null = null;
 let focused = -1;
 let collapsed = false;
@@ -71,7 +73,7 @@ window.addEventListener("message", (e: MessageEvent) => {
 // ---------------------------------------------------------------- state from the tool result
 function accept(sc: Json) {
   if (sc.builder !== undefined) mountBuilder(sc.builder || {});
-  if (Array.isArray(sc.tray)) { tray = sc.tray; trayTotal = Number(sc.trayTotal) || tray.length; }
+  if (Array.isArray(sc.tray)) { tray = sc.tray; trayTotal = Number(sc.trayTotal) || tray.length; trayShown = TRAY_PAGE; }
   if (typeof sc.query === "string") (document.getElementById("tray-q") as HTMLInputElement).value = sc.query;
   if (Array.isArray(sc.slots)) {
     const want: ArtifactMeta[] = sc.slots.slice(0, SLOT_MAX);
@@ -237,15 +239,30 @@ function onDrop(i: number, e: DragEvent) {
 function drawTray() {
   const placed = new Set(slots.map((s) => s.meta?.id).filter(Boolean));
   const list = document.getElementById("tray")!;
-  list.replaceChildren(...(tray.length ? tray.map((a) => h("span", {
+  const more = Math.min(TRAY_PAGE, Math.max(tray.length, trayTotal) - trayShown);
+  list.replaceChildren(...(tray.length ? [...tray.slice(0, trayShown).map((a) => h("span", {
     class: `chip art${pick === a.id ? " pick" : ""}${placed.has(a.id) ? " placed" : ""}`, role: "button", tabindex: "0", draggable: "true",
     "aria-pressed": String(pick === a.id), "data-id": a.id, title: `${a.kind}${a.source.chatTitle ? ` · ${a.source.chatTitle}` : ""}`,
     on: {
       dragstart: (e: DragEvent) => { e.dataTransfer!.setData("text/x-maxey0-artifact", a.id); e.dataTransfer!.effectAllowed = "copy"; },
       click: () => { pick = pick === a.id ? null : a.id; drawTray(); slots.forEach((_, j) => drawSlot(j)); setNote(pick ? `${a.title} selected. Tap a tile to place it.` : "", true); },
       keydown: (e: KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); (e.target as HTMLElement).click(); } },
-    } }, a.title, h("span", { class: "kind" }, ` ${a.kind}`))) : [h("span", { class: "meta" }, "No artifacts match.")]));
-  document.getElementById("tray-count")!.textContent = trayTotal > tray.length ? `${tray.length} of ${trayTotal} shown; search to narrow` : `${tray.length} artifact(s)`;
+    } }, a.title, h("span", { class: "kind" }, ` ${a.kind}`))),
+    ...(more > 0 ? [h("button", { type: "button", id: "tray-more", on: { click: showMore } }, `Show ${more} more`)] : [])] : [h("span", { class: "meta" }, "No artifacts match.")]));
+  const total = Math.max(trayTotal, tray.length);
+  document.getElementById("tray-count")!.textContent = `${Math.min(trayShown, tray.length)} of ${total} artifact(s) shown`;
+}
+
+/** Results are listed in full in the page (no inner scroll box, which phones don't scroll inside the
+ *  chat), 12 at a time. Past the loaded results, the next page is fetched from the server. */
+async function showMore() {
+  trayShown += TRAY_PAGE;
+  if (trayShown > tray.length && tray.length < trayTotal) {
+    const q = (document.getElementById("tray-q") as HTMLInputElement).value;
+    try { const r = await callTool("artifact_list", { query: q, limit: 50, offset: tray.length }); tray = tray.concat(r.artifacts ?? []); trayTotal = Number(r.total) || trayTotal; }
+    catch (err) { setNote(`Couldn't load more artifacts: ${(err as Error).message}`); }
+  }
+  drawTray();
 }
 
 function drawHeader() {
@@ -261,7 +278,7 @@ function onSearch() {
   clearTimeout(searchTimer);
   searchTimer = window.setTimeout(async () => {
     const q = (document.getElementById("tray-q") as HTMLInputElement).value;
-    try { const r = await callTool("artifact_list", { query: q, limit: 50 }); tray = r.artifacts ?? []; trayTotal = Number(r.total) || tray.length; drawTray(); }
+    try { const r = await callTool("artifact_list", { query: q, limit: 50 }); tray = r.artifacts ?? []; trayTotal = Number(r.total) || tray.length; trayShown = TRAY_PAGE; drawTray(); }
     catch (err) { setNote(`Couldn't search artifacts: ${(err as Error).message}`); }
   }, 250);
 }
@@ -300,9 +317,11 @@ function mount() {
 async function start() {
   mount();
   try {
-    await request("ui/initialize", { protocolVersion: PROTOCOL, clientInfo: { name: "maxey0", version: __VERSION__ }, capabilities: {}, appCapabilities: { availableDisplayModes: ["inline", "fullscreen"] } });
+    await request("ui/initialize", { protocolVersion: PROTOCOL, appInfo: { name: "maxey0", version: __VERSION__ }, appCapabilities: { availableDisplayModes: ["inline", "fullscreen"] } });
     hostReady = true;
     notify("ui/notifications/initialized", {});
+    // Report the size now: the host may ignore size changes sent before initialization completed.
+    notify("ui/notifications/size-changed", { width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight });
     // If the host doesn't deliver the tool result (or the view was opened another way), load the saved state.
     setTimeout(async () => { if (!gotResult) { try { accept(await callTool("maxey0_open_app", {})); } catch (err) { setNote(`Couldn't load Maxey0: ${(err as Error).message}`); } } }, 1500);
   } catch (err) {

@@ -10,7 +10,7 @@ const logo = "data:image/webp;base64," + readFileSync(join(here, "../plugins/max
 
 const js = (await build({
   entryPoints: [join(here, "ui/artifacts-app.ts")], bundle: true, write: false, format: "iife",
-  target: "es2020", minify: true, define: { __LOGO__: JSON.stringify(logo) }, logLevel: "warning",
+  target: "es2020", minify: true, define: { __LOGO__: JSON.stringify(logo), __VERSION__: JSON.stringify(JSON.parse(readFileSync(join(here, "package.json"), "utf8")).version) }, logLevel: "warning",
 })).outputFiles[0].text;
 
 const css = `:root{--bg:#070a1a;--card:#10153a;--line:#273072;--ink:#e8ebff;--dim:#9aa3d6;--acc:#5b7cff;--ok:#34d399;--warn:#fbbf24;--bad:#f87171;color-scheme:dark}

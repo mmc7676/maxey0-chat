@@ -1,6 +1,6 @@
 # Maxey0 · Structured Context Worlds
 
-Maxey0 and its Structured Context Worlds (SCWs), packaged for Claude. Version 0.3.0, 2026-10-16.
+Maxey0 and its Structured Context Worlds (SCWs), packaged for Claude. Version 0.3.1, 2026-10-16.
 
 An SCW (Structured Context World) is a named container for a piece of work: a description, files, and the steps that run in it. SCWs can sit inside other SCWs. Maxey0 is the orchestrator: you set up SCWs, agents and workflows in the Maxey0 app drawn in the chat, or by typing, and Maxey0 runs them with agents and shows their progress. With the Maxey0 connector, the same app also holds up to 4 of your stored artifacts as live tiles side by side.
 
@@ -25,7 +25,7 @@ The plugin does not include the connector yet (no `.mcp.json`). A plugin's files
 Either:
 
 - **Add marketplace (updates itself):** Customize > Plugins > **Add** > **Add marketplace** > `mmc7676/maxey0-chat`, then add **maxey0** from it. New versions on `main` reach your account without reinstalling.
-- **Upload the zip:** download [`dist/maxey0-plugin-v0.3.0.zip`](https://github.com/mmc7676/maxey0-chat/raw/main/dist/maxey0-plugin-v0.3.0.zip) (not GitHub's green **Code > Download ZIP**), then Customize > Plugins > **Add** > **Upload plugin**.
+- **Upload the zip:** download [`dist/maxey0-plugin-v0.3.1.zip`](https://github.com/mmc7676/maxey0-chat/raw/main/dist/maxey0-plugin-v0.3.1.zip) (not GitHub's green **Code > Download ZIP**), then Customize > Plugins > **Add** > **Upload plugin**.
 
 Remove any other Maxey0 plugin or `maxey0` skill first, so only one is installed. Then type `/` in a chat and pick **maxey0**.
 

@@ -43,6 +43,8 @@ const hostHtml = `<!doctype html><html><body style="margin:0"><iframe id="app" s
 window.__log=[];const app=document.getElementById("app");
 window.addEventListener("message",async(e)=>{if(e.source!==app.contentWindow)return;const m=e.data;if(!m||m.jsonrpc!=="2.0")return;window.__log.push(m.method||"response");
  const reply=(result)=>app.contentWindow.postMessage({jsonrpc:"2.0",id:m.id,result},"*");
+ // A strict host: MCP Apps 2026-01-26 requires exactly {appInfo, appCapabilities, protocolVersion}.
+ if(m.method==="ui/initialize"){const k=Object.keys(m.params||{}).sort().join();if(k!=="appCapabilities,appInfo,protocolVersion"||!(m.params.appInfo&&m.params.appInfo.name&&m.params.appInfo.version)){window.__badInit=k;return app.contentWindow.postMessage({jsonrpc:"2.0",id:m.id,error:{code:-32602,message:"invalid ui/initialize params: "+k}},"*")}}
  if(m.method==="ui/initialize")return reply({protocolVersion:"2026-01-26",hostCapabilities:{},hostInfo:{name:"test-host",version:"1"},hostContext:{displayMode:"inline",availableDisplayModes:["inline","fullscreen"]}});
  if(m.method==="ui/request-display-mode")return reply({mode:m.params.mode});
  if(m.method==="tools/call"){const r=await fetch("/rpc",{method:"POST",body:JSON.stringify(m.params)});return reply(await r.json())}
@@ -79,7 +81,7 @@ const chip = (id) => tile(id).locator(".chip").first();
 await step("handshake: ui/initialize then initialized, and the list loads by tools/call", async () => {
   await tile("counter").waitFor({ timeout: 15000 });
   const log = await page.evaluate(() => window.__log);
-  assert.equal(log[0], "ui/initialize"); assert.ok(log.includes("ui/notifications/initialized")); assert.ok(log.includes("tools/call"));
+  assert.equal(await page.evaluate(() => window.__badInit ?? null), null, "ui/initialize matches the spec"); assert.equal(log[0], "ui/initialize"); assert.ok(log.includes("ui/notifications/initialized")); assert.ok(log.includes("tools/call"));
   assert.equal(await board.locator("article.tile").count(), fixtures.length);
   assert.match(await board.locator("#count").textContent(), /6 shown of 6/);
 });

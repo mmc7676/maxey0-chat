@@ -32,7 +32,7 @@ button.primary{background:var(--acc);border-color:var(--acc);color:#fff}button:f
 .toggle{font-weight:600;border:none;padding:6px 0}
 #arts-body.collapsed{display:none}
 .chip{font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--dim);white-space:nowrap}
-.tray{margin:6px 0;max-height:132px;overflow:auto}
+.tray{margin:6px 0}#tray-more{font-size:12px;padding:5px 12px}
 .chip.art{font-size:12px;padding:5px 10px;cursor:grab;background:var(--bg-accent);color:var(--text-accent);border-color:var(--border-accent);white-space:normal}
 .chip.art .kind{color:var(--dim)}.chip.art.pick{outline:2px solid var(--acc)}.chip.art.placed{opacity:.55}
 .st-rendered{color:var(--ok);border-color:var(--ok)}.st-error{color:var(--bad);border-color:var(--bad)}.st-loading,.st-running{color:var(--warn);border-color:var(--warn)}
@@ -42,7 +42,7 @@ button.primary{background:var(--acc);border-color:var(--acc);color:#fff}button:f
 .tslot.empty{border-style:dashed;min-height:120px;justify-content:center}.tslot.hot{border-color:var(--acc)}
 .tslot.wide{grid-column:1/-1}
 .tslot .drop{width:100%;min-height:80px;border-style:dashed;color:var(--dim)}
-.tbody{border-radius:8px;overflow:hidden;background:#fff;height:300px}.tslot.empty .tbody{display:none}.tbody.tall{height:640px}
+.tbody{border-radius:8px;overflow:hidden;background:#fff;height:300px}@media (max-width:600px){.tbody{height:420px}.tbody.tall{height:640px}}.tslot.empty .tbody{display:none}.tbody.tall{height:640px}
 .frame{width:100%;height:100%;border:0;display:block}
 body.focus{padding:0}body.focus #builder,body.focus .arts-head,body.focus #arts-body>:not(#slots),body.focus .tslot:not(.focused){display:none}
 body.focus #arts{margin:0;border:0;padding:0}body.focus #slots{display:block;margin:0}

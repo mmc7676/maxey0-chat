@@ -35,6 +35,8 @@ const server = http.createServer(async (req, res) => {
 }).listen(0);
 port = server.address().port;
 
+// Ten older artifacts first, so the tray has 15 and must page them (12 shown, then "Show 3 more").
+for (let n = 1; n <= 10; n++) await call("artifact_upsert", { id: `filler${n}`, title: `Filler ${n}`, kind: "html", code: `<p>${n}</p>` });
 for (const f of fixtures) await call("artifact_upsert", f);
 const appRes = (await rpc("resources/read", { uri: "ui://maxey0/app.html" })).contents[0];
 const appHtml = appRes.text;
@@ -48,6 +50,8 @@ const hostHtml = `<!doctype html><html><body style="margin:0"><iframe id="app" s
 window.__log=[];window.__msgs=[];window.__links=[];window.__modes=[];const app=document.getElementById("app");const RESULT=${JSON.stringify(openResult)};
 window.addEventListener("message",async(e)=>{if(e.source!==app.contentWindow)return;const m=e.data;if(!m||m.jsonrpc!=="2.0")return;window.__log.push(m.method||"response");
  const reply=(result)=>app.contentWindow.postMessage({jsonrpc:"2.0",id:m.id,result},"*");
+ // A strict host: MCP Apps 2026-01-26 requires exactly {appInfo, appCapabilities, protocolVersion}.
+ if(m.method==="ui/initialize"){const k=Object.keys(m.params||{}).sort().join();if(k!=="appCapabilities,appInfo,protocolVersion"||!(m.params.appInfo&&m.params.appInfo.name&&m.params.appInfo.version)){window.__badInit=k;return app.contentWindow.postMessage({jsonrpc:"2.0",id:m.id,error:{code:-32602,message:"invalid ui/initialize params: "+k}},"*")}}
  if(m.method==="ui/initialize")return reply({protocolVersion:"2026-01-26",hostCapabilities:{openLinks:{},message:{text:{}}},hostInfo:{name:"test-host",version:"1"},hostContext:{displayMode:"inline",availableDisplayModes:["inline","fullscreen"]}});
  if(m.method==="ui/notifications/initialized")return app.contentWindow.postMessage({jsonrpc:"2.0",method:"ui/notifications/tool-result",params:RESULT},"*");
  if(m.method==="ui/request-display-mode"){window.__modes.push(m.params.mode);return reply({mode:m.params.mode})}
@@ -89,7 +93,12 @@ await step("opens with the builder drawn from the workflow and the saved tile ru
   assert.equal(await app.locator("article.tslot").count(), 4, "exactly 4 tiles");
 });
 await step("import tray lists the artifacts; tap an artifact then tap a tile places it", async () => {
-  assert.equal(await app.locator("#tray .chip.art").count(), 5);
+  assert.equal(await page.evaluate(() => window.__badInit ?? null), null, "ui/initialize matches the spec");
+  assert.equal(await app.locator("#tray .chip.art").count(), 12, "12 results shown at first");
+  assert.match(await app.locator("#tray-count").textContent(), /12 of 15 artifact\(s\) shown/);
+  await app.locator("#tray-more").click();
+  assert.equal(await app.locator("#tray .chip.art").count(), 15, "Show more lists the rest in the page");
+  assert.equal(await app.locator("#tray-more").count(), 0);
   await app.locator('#tray .chip.art[data-id="counter"]').click();
   await slot(1).locator("button.drop").click();
   await rendered(1);

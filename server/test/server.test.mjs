@@ -64,7 +64,7 @@ test("JSON responses declare UTF-8, and the server reports its release version",
   const h = await raw("/health", { method: "GET" });
   assert.equal(h.headers.get("content-type"), "application/json; charset=utf-8");
   assert.equal((await h.json()).server.title, "Maxey0 \u00b7 SCWs");
-  assert.equal(SERVER_INFO.version, "0.3.0");
+  assert.equal(SERVER_INFO.version, "0.3.1");
   const m = await raw(`/mcp/${KEY}`, { method: "POST", body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }) });
   assert.equal(m.headers.get("content-type"), "application/json; charset=utf-8");
 });
@@ -74,7 +74,7 @@ test("Maxey0 app: resource carries the builder, the tile code and its CSP", asyn
   const c = (await rpc("resources/read", { uri: "ui://maxey0/app.html" })).result.contents[0];
   assert.equal(c.mimeType, "text/html;profile=mcp-app");
   assert.ok(c._meta.ui.csp.resourceDomains.includes("https://cdn.jsdelivr.net"));
-  for (const s of ["window.Maxey0=", "parseWorkflow", "ui/message", "ui/open-link", "ui/request-display-mode", "maxey0_app_action", "artifact_get", "Maxey0 0.3.0"]) assert.ok(c.text.includes(s), s);
+  for (const s of ["window.Maxey0=", "parseWorkflow", "ui/message", "ui/open-link", "ui/request-display-mode", "maxey0_app_action", "artifact_get", "Maxey0 0.3.1"]) assert.ok(c.text.includes(s), s);
   assert.ok(!/new Function\(/.test(c.text.split("window.Maxey0=")[1] ?? ""), "tile code runs without eval");
 });
 test("Maxey0 app: slots are validated, capped at 4, saved, and returned with the tray", async () => {
@@ -101,4 +101,20 @@ test("Maxey0 app: full-screen link serves one artifact version in a sandboxed pa
   assert.equal((await raw(path, { method: "GET" })).status, 410, "a link is for one version");
   assert.equal((await raw("/a/0123456789abcdef0123456789abcdef", { method: "GET" })).status, 410);
   const nope = await call("maxey0_app_action", { action: "artifact.link", id: "missing" }); assert.equal(nope.isError, true);
+});
+
+test("one version across Maxey0-Chat: connector, both views, builder, skill, plugin and marketplace", async () => {
+  const { readFileSync } = await import("node:fs");
+  const r = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
+  const v = JSON.parse(r("../package.json")).version;
+  assert.match(v, /^0\.\d+\.\d+$/);
+  assert.equal(SERVER_INFO.version, v, "connector");
+  assert.equal(JSON.parse(r("../../plugins/maxey0/.claude-plugin/plugin.json")).version, v, "plugin.json");
+  const m = JSON.parse(r("../../.claude-plugin/marketplace.json"));
+  assert.equal(m.metadata.version, v, "marketplace"); assert.equal(m.plugins[0].version, v, "marketplace plugin entry");
+  assert.ok(r("../../plugins/maxey0/skills/maxey0/SKILL.md").includes(`# Maxey0 (v${v})`), "SKILL.md");
+  assert.ok(r("../../plugins/maxey0/app/maxey0.js").includes(`version:"${v}"`), "builder");
+  assert.ok(r("../src/app-ui-html.ts").includes(`Maxey0 ${v}`), "app view");
+  assert.ok(r("../src/artifacts-ui-html.ts").includes(`name:\\"maxey0-artifacts\\",version:\\"${v}\\"`), "artifacts board view");
+  assert.ok(r("../../README.md").includes(`Version ${v},`) && r("../../plugins/maxey0/README.md").startsWith(`# Maxey0 (v${v})`), "READMEs");
 });

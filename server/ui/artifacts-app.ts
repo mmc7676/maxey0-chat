@@ -4,6 +4,7 @@
 import { ArtifactMeta, ArtifactKind, RENDERED_KINDS, tileDocument } from "../src/artifacts";
 
 declare const __LOGO__: string;
+declare const __VERSION__: string;
 
 type Json = Record<string, any>;
 interface Tile { meta: ArtifactMeta; open: boolean; expanded: boolean; state: "idle" | "loading" | "running" | "rendered" | "error"; detail: string; frame?: HTMLIFrameElement; reported?: number; el?: { root: HTMLElement; head: HTMLElement; slot: HTMLElement; actions: HTMLElement } }
@@ -223,9 +224,11 @@ async function start() {
   mount();
   draw();
   try {
-    await request("ui/initialize", { protocolVersion: PROTOCOL, clientInfo: { name: "maxey0-artifacts", version: "0.3.0" }, capabilities: {}, appCapabilities: { availableDisplayModes: ["inline", "fullscreen"] } });
+    await request("ui/initialize", { protocolVersion: PROTOCOL, appInfo: { name: "maxey0-artifacts", version: __VERSION__ }, appCapabilities: { availableDisplayModes: ["inline", "fullscreen"] } });
     hostReady = true;
     notify("ui/notifications/initialized", {});
+    // Report the size now: the host may ignore size changes sent before initialization completed.
+    notify("ui/notifications/size-changed", { width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight });
     if (!order.length) await refresh();
   } catch (err) {
     document.getElementById("top-err")!.textContent = `Couldn't connect to Claude: ${(err as Error).message}`;

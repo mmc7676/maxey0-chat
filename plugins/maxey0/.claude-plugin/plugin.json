@@ -1,6 +1,6 @@
 {
   "name": "maxey0",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Maxey0: set up Structured Context Worlds (SCWs), agents and workflows in an app drawn in the chat, place up to 4 stored artifacts as live tiles (with the Maxey0 connector), then run and monitor them.",
   "author": {
     "name": "Mike Cohan (Human0)",

@@ -7,7 +7,7 @@ import { APP_HTML } from "./app-ui-html";
 import { ArtifactMeta, ArtifactKind, ARTIFACT_KINDS, RESOURCE_DOMAINS, checkArtifact, kindOf, sha256Hex, tileDocument } from "./artifacts";
 
 export const EFFORT_RULE = "Effort on every input: classify each step by what would catch a wrong answer. Mechanical (a test, parse, count, exit code or tool check settles it): one pass, no second opinion. Judgment (nothing mechanical settles it): effort rises with the cost of a wrong answer; verify what is cheap to verify, and have a checker that did not make the work review it. An explicit effort instruction from the user wins. Report what was checked, and by what, separately from what was not.";
-export const SERVER_INFO = { name: "maxey0", title: "Maxey0 · SCWs", version: "0.3.0" };
+export const SERVER_INFO = { name: "maxey0", title: "Maxey0 · SCWs", version: "0.3.1" };
 export const UI_URI = "ui://maxey0/dashboard.html";
 export const UI_MIME = "text/html;profile=mcp-app";
 export const ARTIFACTS_UI_URI = "ui://maxey0/artifacts.html";
