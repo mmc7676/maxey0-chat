@@ -18,7 +18,7 @@ export interface ArtifactMeta {
 }
 
 /** Hosts a tile may load scripts and styles from. Declared as the UI resource's CSP resourceDomains. */
-export const RESOURCE_DOMAINS = ["https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://unpkg.com", "https://cdn.tailwindcss.com"];
+export const RESOURCE_DOMAINS = ["https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://unpkg.com", "https://cdn.tailwindcss.com", "https://fonts.googleapis.com", "https://fonts.gstatic.com"];
 
 const NPM = "https://cdn.jsdelivr.net/npm/";
 /** Libraries a React artifact may import, each pinned to a UMD build on jsDelivr and the global it defines.

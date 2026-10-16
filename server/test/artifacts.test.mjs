@@ -23,7 +23,7 @@ test("resources: artifacts UI is listed, declares its CSP, embeds the logo and s
   assert.deepEqual((await rpc("resources/list")).result.resources.map((r) => r.uri), ["ui://maxey0/dashboard.html", "ui://maxey0/artifacts.html"]);
   const c = (await rpc("resources/read", { uri: "ui://maxey0/artifacts.html" })).result.contents[0];
   assert.equal(c.mimeType, "text/html;profile=mcp-app");
-  assert.deepEqual(c._meta.ui.csp.resourceDomains, ["https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://unpkg.com", "https://cdn.tailwindcss.com"]);
+  assert.deepEqual(c._meta.ui.csp.resourceDomains, ["https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://unpkg.com", "https://cdn.tailwindcss.com", "https://fonts.googleapis.com", "https://fonts.gstatic.com"]);
   assert.ok(c.text.includes("data:image/webp;base64,")); assert.ok(c.text.includes("ui/initialize")); assert.ok(c.text.includes("artifact_get"));
   const old = (await rpc("resources/read", { uri: "ui://maxey0/dashboard.html" })).result.contents[0];
   assert.equal(old._meta.ui.csp, undefined, "existing dashboard resource unchanged");
@@ -97,6 +97,7 @@ test("checker: broken React artifacts fail on the right check, with the reason n
 test("checker: HTML from blocked hosts, non-HTML and empty SVG fail; allowed CDNs pass", async () => {
   assert.deepEqual(failing("html", '<script src="https://evil.example/x.js"></script><p>hi</p>'), ["external_hosts_allowed"]);
   assert.deepEqual(failing("html", '<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script><link href="https://cdn.tailwindcss.com/x.css"><p>hi</p>'), []);
+  assert.deepEqual(failing("html", '<link href="https://fonts.googleapis.com/css2?family=Inter" rel="stylesheet"><p>x</p>'), [], "Google Fonts allowed");
   assert.deepEqual(failing("html", "just words"), ["is_html"]);
   assert.deepEqual(failing("svg", "<g></g>"), ["is_svg"]);
   assert.deepEqual(failing("markdown", "# fine"), []);
