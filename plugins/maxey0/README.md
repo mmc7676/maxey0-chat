@@ -1,10 +1,10 @@
-# Maxey0 (v3.1.0)
+# Maxey0 (v3.2.0)
 
 Set up **SCWs** (Structured Context Worlds: named containers for work), **agents** and **workflows** in a dashboard drawn in the chat, or by typing, then run them and watch their progress.
 
 ## Install
 
-- **Claude app, web and mobile (recommended):** upload [`dist/maxey0-skill-v3.1.0.zip`](https://github.com/mmc7676/maxey0-chat/raw/main/dist/maxey0-skill-v3.1.0.zip) in claude.ai under Customize > Skills. You then type **`/maxey0`** in any chat. Remove any older Maxey0 plugin first, so only one Maxey0 is installed.
+- **Claude app, web and mobile (recommended):** upload [`dist/maxey0-skill-v3.2.0.zip`](https://github.com/mmc7676/maxey0-chat/raw/main/dist/maxey0-skill-v3.2.0.zip) in claude.ai under Customize > Skills. You then type **`/maxey0`** in any chat. Remove any older Maxey0 plugin first, so only one Maxey0 is installed.
 - **Claude Code:** `/plugin install maxey0 --marketplace mmc7676/maxey0-chat`, then `/maxey0:maxey0`.
 
 ## Use

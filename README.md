@@ -1,6 +1,6 @@
 # Maxey0 · Structured Context Worlds
 
-Maxey0 and its Structured Context Worlds (SCWs), packaged for Claude. Version 3.1.0, 2026-10-14.
+Maxey0 and its Structured Context Worlds (SCWs), packaged for Claude. Version 3.2.0, 2026-10-16.
 
 An SCW (Structured Context World) is a named container for a piece of work: a description, files, and the steps that run in it. SCWs can sit inside other SCWs. Maxey0 is the orchestrator: you set up SCWs, agents and workflows in an inline dashboard or by typing, and Maxey0 runs them with agents and shows their progress.
 
@@ -15,7 +15,7 @@ An SCW (Structured Context World) is a named container for a piece of work: a de
 
 ### Claude app (web and mobile): one skill, `/maxey0`
 
-1. Download [`dist/maxey0-skill-v3.1.0.zip`](https://github.com/mmc7676/maxey0-chat/raw/main/dist/maxey0-skill-v3.1.0.zip). Not GitHub's green **Code > Download ZIP**, which is the whole repository.
+1. Download [`dist/maxey0-skill-v3.2.0.zip`](https://github.com/mmc7676/maxey0-chat/raw/main/dist/maxey0-skill-v3.2.0.zip). Not GitHub's green **Code > Download ZIP**, which is the whole repository.
 2. On claude.ai, remove any older Maxey0 plugin (Customize > Plugins), then upload the zip under Customize > Skills.
 3. In any chat, on web or mobile, type **`/maxey0`**.
 
@@ -25,13 +25,13 @@ An SCW (Structured Context World) is a named container for a piece of work: a de
 /plugin install maxey0 --marketplace mmc7676/maxey0-chat
 ```
 
-Then `/maxey0:maxey0`. The same skill is also in `dist/maxey0-plugin-v3.1.0.zip` for plugin uploads.
+Then `/maxey0:maxey0`. The same skill is also in `dist/maxey0-plugin-v3.2.0.zip` for plugin uploads.
 
 `dist/` holds only the current version; checksums are in `dist/SHA256SUMS`.
 
 ### Optional: the remote server
 
-Gives SCWs that persist across chats and scope enforced by the server rather than by the model.
+Gives SCWs that persist across chats and scope enforced by the server rather than by the model, and stores artifacts as objects shown as live tiles (`maxey0_open_artifacts`). `scripts/import-index.mjs` loads an artifact index made from a claude.ai data export.
 
 ```
 cd server && npm install
@@ -42,7 +42,7 @@ npm test && npm run deploy
 ```
 
 - **Claude Code:** `claude mcp add --transport http maxey0 https://<your-worker>.workers.dev/mcp/<WORKSPACE_KEY>`. Tested against a local copy of this server with the real Claude Code client, with no sign-in step.
-- **Claude app connector:** adding the same URL as a custom connector failed once at Claude's sign-in registration step, because this server has key-in-URL auth and no OAuth. Not yet resolved; use the plugin instead.
+- **Claude app connector:** add the same URL under Customize > Connectors > Add custom connector, with no OAuth fields. Claude documents authless servers as supported; an earlier attempt failed at a sign-in step and is being re-tested. The key in the URL is the only protection, so treat the URL as a password.
 
 When the server's tools are present, the skills use them; otherwise they use the inline dashboard.
 

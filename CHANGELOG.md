@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.2.0 (2026-10-16)
+- **Artifacts in the server:** artifact objects with mechanical checks (non-empty, size, loadable imports and a default export for React, allowed hosts for HTML), a tiles board as a second MCP Apps view (`ui://maxey0/artifacts.html`), and the tools `maxey0_open_artifacts`, `artifact_list`, `artifact_upsert`, plus app-only `artifact_get` and `artifact_report_render`. Tiles run side by side; opening one never restarts another.
+- **Import:** `server/scripts/import-index.mjs` loads an artifact index made from a claude.ai data export; re-runs update in place. Fixed: it did nothing on Windows, and `--dry-run` was read as the server URL.
+- **Skill:** a section that sends "open, show or search my artifacts" to the board when the connector is connected, and stores built artifacts with `artifact_upsert`.
+- **Versioning:** 3.1.0 was rebuilt on 2026-10-15 with only its dashboard URL re-pinned from the `v3.1.0` tag to commit `4551647`, under the same version number. 3.2.0 replaces both 3.1.0 builds. The in-chat dashboard app (`app/maxey0.js`) is unchanged and still reports 3.1.0.
+- Tests: server 23 and 10 browser checks; plugin 26.
+
 ## 3.1.0 (2026-10-14)
 - **`/maxey0` slash command:** shipped as a standalone skill named `maxey0` (`dist/maxey0-skill-v3.1.0.zip`), installed under Customize > Skills like other skills. The separate `scw` skill is folded into it, so there is one trigger.
 - **Fast:** each render is one 443-byte widget that loads the dashboard from cdn.jsdelivr.net pinned to commit `4551647`, instead of Claude re-typing a 17 KB file. If the CDN cannot be reached the widget says so after 12 seconds.
