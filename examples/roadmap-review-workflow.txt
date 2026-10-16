@@ -1,0 +1,7 @@
+Launch SCW 1 in scw0
+Launch SCW 2 in scw0
+Launch SCW 3 in scw2
+In scw1: /effort-optimizer find the two most recent Maxey0 roadmaps, attach them to SCW1, and list what changed between them. Save to SCW1.
+In scw2: draft a release plan from those changes. Save to SCW2.
+In scw3: check the plan against both roadmaps and list the gaps. Save to SCW3.
+In scw2 when scw3 is complete: count the open items per release and total them. Save to SCW2.

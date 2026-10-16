@@ -172,6 +172,59 @@ await step("render results are recorded on the server", async () => {
   const arts = Object.fromEntries((await call("artifact_list", {})).structuredContent.artifacts.map((a) => [a.id, a]));
   for (const id of ["page", "counter", "flow", "chart"]) assert.equal(arts[id].render?.ok, true, id);
 });
+const mon = app.frameLocator("#mon iframe");
+await step("Monitor: Run with Monitor ticked starts a run record, sends its id to Claude and shows the live monitor", async () => {
+  // A second step in SCW5, so there is a waiting step to skip later.
+  await app.locator('#m0 .scw:has(> .row > .chip:text-is("scw5"))').getByRole("button", { name: "+ step" }).click();
+  await app.locator('#m0 textarea[aria-label="Task"]').last().fill("summarize the research in five bullets");
+  await app.locator("#monitor-next").check();
+  await app.locator("#m0 #run").click();
+  await page.waitForFunction(() => window.__msgs.length === 2, null, { timeout: 10000 });
+  const m = JSON.parse((await page.evaluate(() => window.__msgs[1])).slice("Maxey0: run ".length));
+  assert.match(m.runId, /^run-/); assert.equal(m.monitor, true);
+  assert.equal(await app.locator("#mon").isVisible(), true); assert.equal(await app.locator("#arts").isVisible(), false);
+  await mon.locator('.step[data-step="s1"] .chip').first().waitFor({ timeout: 10000 });
+  assert.equal(await mon.locator('.step[data-step="s1"] .chip').first().textContent(), "waiting");
+  assert.equal(await mon.locator('section.scw[data-scw="scw0"] section.scw[data-scw="scw5"]').count(), 1, "SCW5 is drawn inside SCW0");
+  globalThis.__runId = m.runId;
+});
+await step("Monitor: progress Claude reports appears in the monitor within one refresh", async () => {
+  await call("maxey0_run_update", { runId: globalThis.__runId, steps: [{ id: "s1", status: "running", effort: "judgment" }], log: "Maxey1 started the research step" });
+  await mon.locator('.step[data-step="s1"] .chip.st-running').waitFor({ timeout: 8000 });
+  assert.match(await mon.locator("#log").textContent(), /Maxey1 started the research step/);
+  assert.match(await mon.locator('.step[data-step="s1"]').textContent(), /effort: judgment/);
+});
+await step("Monitor: Pause, Skip and a note from the monitor reach Claude's next update", async () => {
+  await mon.locator("#pause").click();
+  await mon.locator('.step[data-step="s2"] button', { hasText: "Skip" }).click();
+  await mon.locator("#note").fill("keep it short"); await mon.locator("#send").click();
+  await page.waitForTimeout(800);
+  const u = await call("maxey0_run_update", { runId: globalThis.__runId });
+  assert.equal(u.structuredContent.control.paused, true); assert.deepEqual(u.structuredContent.control.skip, ["s2"]);
+  assert.equal(u.structuredContent.control.notes[0].text, "keep it short");
+  await mon.locator("#pause", { hasText: "Resume" }).waitFor({ timeout: 8000 });
+});
+await step("Monitor: Back to artifact tiles brings the tiles back without restarting them", async () => {
+  await app.getByRole("button", { name: "Back to artifact tiles" }).click();
+  assert.equal(await app.locator("#arts").isVisible(), true);
+  assert.equal(await frame(1).locator("#inc").textContent(), "count 2");
+});
+await step("Close folds Maxey0 to one line and stops the tiles; Reopen brings them back", async () => {
+  await app.getByRole("button", { name: "Close Maxey0" }).click();
+  assert.equal(await app.locator("#closed-bar").isVisible(), true); assert.equal(await app.locator("#m0").isVisible(), false);
+  assert.equal(await app.locator("article.tslot iframe").count(), 0, "tile frames stopped");
+  await app.getByRole("button", { name: "Reopen" }).click();
+  await rendered(0);
+  assert.deepEqual(await savedSlots(), ["page", "counter", "chart"], "closing didn't change the saved tiles");
+});
+await step("Reloading the chat shows the tiles saved now, not the ones in the original tool result", async () => {
+  await call("maxey0_app_action", { action: "slots.set", ids: ["flow"] });
+  await page.reload();
+  await app.locator("#m0 #viz").waitFor({ timeout: 15000 });
+  await rendered(0);
+  assert.match(await slot(0).textContent(), /Mermaid flow/);
+  assert.match(await app.locator("#arts-toggle").textContent(), /1 of 4/);
+});
 await page.screenshot({ path: process.env.SHOT || "maxey0-app.png", fullPage: false });
 
 await browser.close(); server.close();

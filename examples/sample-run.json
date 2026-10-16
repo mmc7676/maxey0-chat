@@ -1,0 +1,140 @@
+{
+ "id": "run-example01",
+ "title": "Run: Maxey0 roadmap review",
+ "createdAt": "2026-10-16T22:00:00Z",
+ "updatedAt": "2026-10-16T22:06:30Z",
+ "done": false,
+ "scws": [
+  {
+   "id": "scw0",
+   "name": "SCW0",
+   "parent": null,
+   "desc": "Maxey0 roadmap review"
+  },
+  {
+   "id": "scw1",
+   "name": "Research",
+   "parent": "scw0",
+   "desc": "Find and read the two latest roadmaps",
+   "files": [
+    {
+     "name": "maxey0-roadmap-2026-10.md",
+     "chars": 8120
+    }
+   ]
+  },
+  {
+   "id": "scw2",
+   "name": "Plan",
+   "parent": "scw0",
+   "desc": "Turn findings into a release plan"
+  },
+  {
+   "id": "scw3",
+   "name": "Review",
+   "parent": "scw2",
+   "desc": "Independent check of the plan"
+  }
+ ],
+ "agents": [
+  {
+   "name": "Maxey1",
+   "role": "maker"
+  },
+  {
+   "name": "Maxey2",
+   "role": "checker"
+  },
+  {
+   "name": "Maxey3",
+   "role": "judge"
+  }
+ ],
+ "steps": [
+  {
+   "id": "s1",
+   "scw": "scw1",
+   "agent": "Maxey1",
+   "task": "Compare the two most recent roadmaps and list what changed",
+   "skills": [
+    "effort-optimizer"
+   ],
+   "after": [],
+   "status": "done",
+   "effort": "judgment",
+   "result": "12 items changed; 3 dropped, 4 new (OAuth, run monitor, D1 apps, file graph)."
+  },
+  {
+   "id": "s2",
+   "scw": "scw2",
+   "agent": "Maxey1",
+   "task": "Draft a 0.4 release plan from the changes",
+   "skills": [],
+   "after": [
+    "s1"
+   ],
+   "status": "running",
+   "effort": "judgment",
+   "result": ""
+  },
+  {
+   "id": "s3",
+   "scw": "scw3",
+   "agent": "Maxey2",
+   "task": "Check the plan against the roadmap; list gaps",
+   "skills": [],
+   "after": [
+    "s2"
+   ],
+   "status": "waiting",
+   "effort": "judgment",
+   "result": ""
+  },
+  {
+   "id": "s4",
+   "scw": "scw2",
+   "agent": "Maxey3",
+   "task": "Count open items per release and total them",
+   "skills": [],
+   "after": [
+    "s3"
+   ],
+   "status": "waiting",
+   "effort": "mechanical",
+   "result": ""
+  }
+ ],
+ "control": {
+  "paused": false,
+  "skip": [],
+  "notes": [
+   {
+    "stepId": "s2",
+    "text": "OAuth first",
+    "at": "2026-10-16T22:05:00Z"
+   }
+  ]
+ },
+ "log": [
+  {
+   "at": "2026-10-16T22:00:00Z",
+   "text": "Run sent to Claude."
+  },
+  {
+   "at": "2026-10-16T22:01:10Z",
+   "text": "Maxey1 started s1"
+  },
+  {
+   "at": "2026-10-16T22:04:40Z",
+   "text": "s1 done"
+  },
+  {
+   "at": "2026-10-16T22:05:00Z",
+   "text": "You: note s2 \u2014 OAuth first"
+  },
+  {
+   "at": "2026-10-16T22:05:20Z",
+   "text": "Maxey1 started s2"
+  }
+ ]
+}

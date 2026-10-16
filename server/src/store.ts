@@ -9,7 +9,19 @@ export interface Loop { id: string; name: string; agentIds: string[]; maxIterati
 export interface Gate { id: string; scwId: string; rule: string; mode: "allow" | "deny" | "ask" }
 export interface Plan { id: string; goal: string; scwIds: string[]; agentIds: string[]; loopIds: string[]; gateIds: string[]; status: "submitted" | "running" | "done" | "failed"; createdAt: string; runLog: { at: string; status: string; summary: string }[] }
 export interface ScwEvent { at: string; kind: "read" | "write" | "denied"; agent: string | null; scw: string; detail: string }
-export interface Workspace { id: string; scws: Scw[]; agents: Agent[]; loops: Loop[]; gates: Gate[]; plans: Plan[]; events?: ScwEvent[]; artifacts?: ArtifactMeta[]; slots?: string[]; updatedAt: string }
+export interface Workspace { id: string; scws: Scw[]; agents: Agent[]; loops: Loop[]; gates: Gate[]; plans: Plan[]; events?: ScwEvent[]; artifacts?: ArtifactMeta[]; slots?: string[]; runs?: RunRecord[]; updatedAt: string }
+
+/** A workflow run sent from the Maxey0 app with Monitor on. Claude reports progress into it
+ *  (maxey0_run_update); the app shows it and writes control requests that Claude reads at each step. */
+export interface RunStep { id: string; scw: string; agent?: string; task?: string; skills?: string[]; after?: string[]; status?: string; result?: string; effort?: string }
+export interface RunRecord {
+  id: string; title: string; createdAt: string; updatedAt: string; done: boolean;
+  scws: { id: string; name: string; parent: string | null; desc?: string; files?: { name: string; chars?: number }[] }[];
+  agents: { name: string; role?: string }[];
+  steps: RunStep[];
+  control: { paused: boolean; skip: string[]; notes: { stepId: string | null; text: string; at: string }[] };
+  log: { at: string; text: string }[];
+}
 
 /** A short-lived capability: an upload link for one SCW, or a read-only view of one artifact version. */
 export interface Ticket { ws: string; scwId: string; artifactId?: string; version?: number }

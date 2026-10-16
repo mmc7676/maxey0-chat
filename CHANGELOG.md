@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.0 (2026-10-16)
+- **Run monitor.** Tick **Monitor the next Run here** before **Run**: the app records the run on your server, sends its id with the run, and replaces the Artifacts section with a live dashboard (`server/ui/run-monitor.html`, the default monitor template, with the Maxey0 logo):
+  - SCW0 as the top-level object, every SCW drawn inside its parent, each step in its SCW with agent, status, effort class, skills and result;
+  - progress bar, counts and a timeline;
+  - controls: **Pause/Resume**, **Skip** a waiting step, **Note** on a step or the whole run.
+  Claude reports progress with the new tool `maxey0_run_update`, whose every response returns your controls; the skill obeys them between steps (a running step finishes first). The app refreshes the monitor every 3 seconds. **Back to artifact tiles** returns to the tiles without restarting them.
+- **Close Maxey0** folds the app to one line and stops its tiles; **Reopen** brings them back. Saved tiles are unchanged.
+- **Fix:** reloading a chat showed the tiles from the moment Maxey0 was opened, not the ones saved since (Claude replays the original tool result). The app now takes the tiles from the server.
+- **Attach files to an SCW:** the skill finds the file you name with Claude's tools, says which it picked, and adds it to that SCW in the builder.
+- **Fix for pulls on Windows:** a `.gitattributes` keeps LF line endings and the UI builds normalize them, so `npm test` no longer leaves rebuilt files that block `git pull`.
+- Tests: connector 30; app in a browser 17 (monitor, close, reload); artifacts board 10; plugin 27.
+
 ## 0.3.1 (2026-10-16)
 Fixes from the first run on a phone.
 - **Import tray:** search results are listed in full in the page, 12 at a time, with a **Show N more** button that also fetches the next page from the server. Before, results sat in a 132-pixel box with its own scrollbar, which phones don't scroll inside the chat, so only the first 3 could be picked.

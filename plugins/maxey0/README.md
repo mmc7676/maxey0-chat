@@ -1,10 +1,10 @@
-# Maxey0 (v0.3.1)
+# Maxey0 (v0.4.0)
 
 Set up **SCWs** (Structured Context Worlds: named containers for work), **agents** and **workflows** in the Maxey0 app drawn in the chat, or by typing, then run them and watch their progress. With the Maxey0 connector, the app also holds up to 4 of your stored artifacts as live tiles.
 
 ## Install
 
-- **Claude app (web, desktop, mobile):** Customize > Plugins > Add > **Add marketplace** > `mmc7676/maxey0-chat` (updates itself), or upload [`dist/maxey0-plugin-v0.3.1.zip`](https://github.com/mmc7676/maxey0-chat/raw/main/dist/maxey0-plugin-v0.3.1.zip) with Add > **Upload plugin**. Remove any other Maxey0 plugin or skill first.
+- **Claude app (web, desktop, mobile):** Customize > Plugins > Add > **Add marketplace** > `mmc7676/maxey0-chat` (updates itself), or upload [`dist/maxey0-plugin-v0.4.0.zip`](https://github.com/mmc7676/maxey0-chat/raw/main/dist/maxey0-plugin-v0.4.0.zip) with Add > **Upload plugin**. Remove any other Maxey0 plugin or skill first.
 - **Claude Code:** `/plugin install maxey0 --marketplace mmc7676/maxey0-chat`, then `/maxey0:maxey0`.
 - **Connector (for artifact tiles):** deploy `server/` and add it under Customize > Connectors; see the repository README.
 
@@ -14,6 +14,7 @@ Set up **SCWs** (Structured Context Worlds: named containers for work), **agents
 - **Type or paste a workflow** and press **Visualize**, for example `Launch SCW 5 in scw0`, `In scw5: research X /deep-research. Save to SCW5.` `syntax.md` in the skill lists what is understood.
 - **Place agents** on steps by dragging, or by tapping the agent and then the step. Add worlds, steps and files, choose when a step starts, and turn on a checker loop.
 - **Place artifacts** in up to 4 tiles the same way: drag one from the import tray onto a tile, or tap it and then tap the tile. Each tile can **Expand**, go **Full screen** inside Claude, or **Open outside ↗** in the browser (a link valid for 10 minutes). The Artifacts header collapses and expands the section; tiles keep running.
+- **Monitor:** tick "Monitor the next Run here" before **Run** and the Artifacts section is replaced by a live dashboard of the run: SCW0 with every SCW drawn inside its parent, each step with its agent, status, effort class and result, a timeline, and controls (Pause/Resume, Skip a waiting step, notes for a step or the whole run) that Claude reads between steps. **Back to artifact tiles** returns; **Close Maxey0** folds the app to one line.
 - **Run** sends the workflow to Maxey0, which runs ready steps at once (with subagents where available) and redraws the app with each step's status and result.
 - Every input goes through the effort rule in section 0 of the skill.
 

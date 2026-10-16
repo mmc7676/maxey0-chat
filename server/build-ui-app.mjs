@@ -8,11 +8,13 @@ import { dirname, join } from "node:path";
 const here = dirname(fileURLToPath(import.meta.url));
 const version = JSON.parse(readFileSync(join(here, "package.json"), "utf8")).version;
 const logo = "data:image/webp;base64," + readFileSync(join(here, "../plugins/maxey0/src/logo48.webp")).toString("base64");
-const builder = readFileSync(join(here, "../plugins/maxey0/app/maxey0.js"), "utf8");
+const builder = readFileSync(join(here, "../plugins/maxey0/app/maxey0.js"), "utf8").replace(/\r\n/g, "\n");
+// The default run-monitor dashboard (ui/run-monitor.html) with the logo filled in.
+const monitor = readFileSync(join(here, "ui/run-monitor.html"), "utf8").replace(/\r\n/g, "\n").replace("__LOGO__", logo);
 
 const js = (await build({
   entryPoints: [join(here, "ui/app.ts")], bundle: true, write: false, format: "iife",
-  target: "es2020", minify: true, define: { __LOGO__: JSON.stringify(logo), __VERSION__: JSON.stringify(version) }, logLevel: "warning",
+  target: "es2020", minify: true, define: { __LOGO__: JSON.stringify(logo), __VERSION__: JSON.stringify(version), __MONITOR__: JSON.stringify(monitor) }, logLevel: "warning",
 })).outputFiles[0].text;
 
 // The builder's styles use the inline-widget host's CSS variables; this view defines them.
@@ -47,6 +49,8 @@ button.primary{background:var(--acc);border-color:var(--acc);color:#fff}button:f
 body.focus{padding:0}body.focus #builder,body.focus .arts-head,body.focus #arts-body>:not(#slots),body.focus .tslot:not(.focused){display:none}
 body.focus #arts{margin:0;border:0;padding:0}body.focus #slots{display:block;margin:0}
 .tslot.focused{position:fixed;inset:0;z-index:10;border-radius:0;border:0;padding:8px}.tslot.focused .tbody{flex:1;height:auto}
+.monitor-opt{margin:10px 0 0;font-size:13px;color:var(--dim)}.monitor-opt input{width:auto}.mon-body{height:640px;background:var(--bg)}
+#closed-bar{display:none}body.closed #closed-bar{display:flex}body.closed>:not(#closed-bar):not(script){display:none}
 [hidden]{display:none!important}`;
 
 const safe = (s) => s.replace(/<\/script/gi, "<\\/script");

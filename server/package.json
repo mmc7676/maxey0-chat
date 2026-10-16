@@ -1,6 +1,6 @@
 {
   "name": "maxey0-mcp",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "private": true,
   "description": "Maxey0 remote MCP server (Cloudflare Worker): server-held SCWs with tool-layer scope enforcement, stored artifacts, and the Maxey0 app (workflow builder plus up to 4 live artifact tiles) as an MCP Apps view.",
   "type": "module",

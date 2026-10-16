@@ -1,19 +1,20 @@
 // Maxey0 MCP server core: a stateless Streamable-HTTP MCP endpoint with an MCP Apps dashboard.
 // Runtime-neutral: takes a Request and a Store, returns a Response (Cloudflare Workers, Node 18+, tests).
-import { Store, Workspace, Scw, Agent, Loop, Gate, Plan, ScwFile, ScwEvent } from "./store";
+import { Store, RunRecord, Workspace, Scw, Agent, Loop, Gate, Plan, ScwFile, ScwEvent } from "./store";
 import { DASHBOARD_HTML } from "./ui-html";
 import { ARTIFACTS_HTML } from "./artifacts-ui-html";
 import { APP_HTML } from "./app-ui-html";
 import { ArtifactMeta, ArtifactKind, ARTIFACT_KINDS, RESOURCE_DOMAINS, checkArtifact, kindOf, sha256Hex, tileDocument } from "./artifacts";
 
 export const EFFORT_RULE = "Effort on every input: classify each step by what would catch a wrong answer. Mechanical (a test, parse, count, exit code or tool check settles it): one pass, no second opinion. Judgment (nothing mechanical settles it): effort rises with the cost of a wrong answer; verify what is cheap to verify, and have a checker that did not make the work review it. An explicit effort instruction from the user wins. Report what was checked, and by what, separately from what was not.";
-export const SERVER_INFO = { name: "maxey0", title: "Maxey0 · SCWs", version: "0.3.1" };
+export const SERVER_INFO = { name: "maxey0", title: "Maxey0 · SCWs", version: "0.4.0" };
 export const UI_URI = "ui://maxey0/dashboard.html";
 export const UI_MIME = "text/html;profile=mcp-app";
 export const ARTIFACTS_UI_URI = "ui://maxey0/artifacts.html";
 export const APP_UI_URI = "ui://maxey0/app.html";
 export const SLOT_MAX = 4;
 const LINK_TTL_SECONDS = 600;
+const RUN_MAX = 20, RUN_STEPS_MAX = 200, RUN_LOG_MAX = 200;
 const SUPPORTED_VERSIONS = ["2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26"];
 const MAX_FILE_BYTES = 4 * 1024 * 1024;     // per file (KV allows 25 MB; kept small for tool payloads)
 const MAX_READ_CHARS = 100_000;             // keeps tool results well under Claude's ~150k-char hydration limit
@@ -44,14 +45,27 @@ export const TOOLS: Json[] = [
     inputSchema: { type: "object", properties: {
       state: { type: "object", description: "Builder state: {input} for a typed workflow, or the latest {scws, agents, steps, run} to redraw a run." },
       slots: { type: "array", items: { type: "string" }, maxItems: SLOT_MAX, description: "Artifact ids to place in the tiles, in order." },
-      query: { type: "string", description: "Pre-fill the import tray's search." } } },
+      query: { type: "string", description: "Pre-fill the import tray's search." },
+      runId: { type: "string", description: "Open the live monitor for this monitored run instead of the artifact tiles." } } },
     _meta: appUi,
+  },
+  {
+    name: "maxey0_run_update",
+    title: "Report Maxey0 run progress",
+    description: "For a run sent from the Maxey0 app with Monitor on (its message carries a runId): report progress so the app's monitor shows it live. Call when the run starts, whenever a step's status changes (waiting, running, done, failed, skipped) and with a short result, and with done=true at the end. The response returns the user's control requests from the monitor: if paused is true, stop starting new steps and say so; skip any step listed in skip and mark it skipped; read new notes and apply them to the step they name (or the whole run).",
+    inputSchema: { type: "object", properties: {
+      runId: { type: "string" },
+      steps: { type: "array", items: { type: "object", properties: { id: { type: "string" }, status: { type: "string", enum: ["waiting", "running", "done", "failed", "skipped"] }, result: { type: "string" }, effort: { type: "string" } }, required: ["id"] } },
+      log: { type: "string", description: "One line for the run's timeline." },
+      done: { type: "boolean" } }, required: ["runId"] },
   },
   {
     name: "maxey0_app_action",
     title: "Maxey0 app action (app)",
-    description: "App-only: save the artifact tile slots, or create a short-lived link that opens one artifact full screen outside the chat.",
-    inputSchema: { type: "object", properties: { action: { type: "string", enum: ["slots.set", "artifact.link"] }, ids: { type: "array", items: { type: "string" } }, id: { type: "string" } }, required: ["action"] },
+    description: "App-only: save the artifact tile slots; create a short-lived link that opens one artifact full screen outside the chat; start, read or control a monitored run.",
+    inputSchema: { type: "object", properties: { action: { type: "string", enum: ["slots.set", "artifact.link", "run.start", "run.get", "run.control"] }, ids: { type: "array", items: { type: "string" } }, id: { type: "string" },
+      runId: { type: "string" }, state: { type: "object" }, title: { type: "string" },
+      control: { type: "string", enum: ["pause", "resume", "skip", "unskip", "note"] }, stepId: { type: "string" }, text: { type: "string" } }, required: ["action"] },
     _meta: appUiOnly,
   },
   {
@@ -279,7 +293,8 @@ export async function callTool(store: Store, wsId: string, baseUrl: string, name
       const tray = listArtifacts(w, { query: args.query }, 50);
       const st = args.state && typeof args.state === "object" ? args.state : null;
       return text(`Opened Maxey0: builder${st?.input ? " with the workflow" : ""}, ${slots.length} of ${SLOT_MAX} artifact tile(s)${slots.length ? `: ${slots.map((a) => a.title).join("; ")}` : ""}. ${tray.total} artifact(s) available to import.`,
-        { builder: st, slots, tray: tray.items, trayTotal: tray.total, query: str(args.query, 200) || null, slotMax: SLOT_MAX });
+        { builder: st, slots, tray: tray.items, trayTotal: tray.total, query: str(args.query, 200) || null, slotMax: SLOT_MAX,
+          run: args.runId ? findRun(w, args.runId) : null });
     }
     case "maxey0_app_action": {
       if (args.action === "slots.set") {
@@ -295,7 +310,50 @@ export async function callTool(store: Store, wsId: string, baseUrl: string, name
         await store.putTicket(t, { ws: w.id, scwId: "", artifactId: a.id, version: a.version }, LINK_TTL_SECONDS);
         return text(`Link for ${a.title}, valid ${LINK_TTL_SECONDS / 60} minutes.`, { url: `${baseUrl}/a/${t}`, expiresInSeconds: LINK_TTL_SECONDS });
       }
+      if (args.action === "run.start") {
+        const st = (args.state && typeof args.state === "object") ? args.state as Json : {};
+        const steps = Array.isArray(st.steps) ? st.steps.slice(0, RUN_STEPS_MAX) : [];
+        if (!steps.length) throw new ToolError("A run needs at least one step.");
+        const r: RunRecord = { id: uid("run"), title: str(args.title, 120) || "Maxey0 run", createdAt: now(), updatedAt: now(), done: false,
+          scws: (Array.isArray(st.scws) ? st.scws : []).slice(0, 100).map((s: Json) => ({ id: str(s.id, 40), name: str(s.name, 80) || str(s.id, 40), parent: s.parent ? str(s.parent, 40) : null, desc: str(s.desc, 500), files: (Array.isArray(s.files) ? s.files : []).slice(0, 50).map((f: Json) => ({ name: str(f.name, 120), chars: Number(f.chars) || 0 })) })),
+          agents: (Array.isArray(st.agents) ? st.agents : []).slice(0, 50).map((a: Json) => ({ name: str(a.name, 60), role: str(a.role, 120) })),
+          steps: steps.map((s: Json) => ({ id: str(s.id, 40), scw: str(s.scw, 40), agent: str(s.agent, 60), task: str(s.task, 1000), skills: strArr(s.skills), after: strArr(s.after), status: "waiting", result: "" })),
+          control: { paused: false, skip: [], notes: [] }, log: [{ at: now(), text: "Run sent to Claude." }] };
+        w.runs = [...(w.runs ?? []), r].slice(-RUN_MAX);
+        await store.putWorkspace(w);
+        return text(`Started monitored run ${r.id}.`, { run: r });
+      }
+      if (args.action === "run.get") return text("run", { run: findRun(w, args.runId) });
+      if (args.action === "run.control") {
+        const r = findRun(w, args.runId); const sid = str(args.stepId, 40) || null;
+        const known = (id: string | null) => { if (id && !r.steps.some((s) => s.id === id)) throw new ToolError(`No step ${id} in ${r.id}.`); };
+        switch (args.control) {
+          case "pause": r.control.paused = true; break;
+          case "resume": r.control.paused = false; break;
+          case "skip": known(sid); if (sid && !r.control.skip.includes(sid)) r.control.skip.push(sid); break;
+          case "unskip": r.control.skip = r.control.skip.filter((x) => x !== sid); break;
+          case "note": known(sid); { const t = str(args.text, 1000); if (!t) throw new ToolError("A note needs text."); r.control.notes.push({ stepId: sid, text: t, at: now() }); } break;
+          default: throw new ToolError(`Unknown control: ${args.control}`);
+        }
+        r.log.push({ at: now(), text: `You: ${args.control}${sid ? ` ${sid}` : ""}${args.control === "note" ? ` — ${str(args.text, 200)}` : ""}` }); r.log = r.log.slice(-RUN_LOG_MAX);
+        r.updatedAt = now(); await store.putWorkspace(w);
+        return text(`Control saved: ${args.control}.`, { run: r });
+      }
       throw new ToolError(`Unknown app action: ${args.action}`);
+    }
+    case "maxey0_run_update": {
+      const r = findRun(w, args.runId);
+      for (const u of Array.isArray(args.steps) ? args.steps : []) {
+        const s = r.steps.find((x) => x.id === u?.id); if (!s) continue;
+        if (["waiting", "running", "done", "failed", "skipped"].includes(u.status)) s.status = u.status;
+        if (typeof u.result === "string") s.result = str(u.result, 2000);
+        if (typeof u.effort === "string") s.effort = str(u.effort, 40);
+      }
+      if (typeof args.log === "string" && args.log.trim()) r.log.push({ at: now(), text: str(args.log, 500) });
+      if (args.done === true) { r.done = true; r.log.push({ at: now(), text: "Run finished." }); }
+      r.log = r.log.slice(-RUN_LOG_MAX); r.updatedAt = now(); await store.putWorkspace(w);
+      const c = r.control;
+      return text(`Recorded. Control: ${c.paused ? "PAUSED — do not start new steps" : "running"}${c.skip.length ? `; skip ${c.skip.join(", ")}` : ""}${c.notes.length ? `; ${c.notes.length} note(s): ${c.notes.map((n) => `${n.stepId ?? "run"}: ${n.text}`).join(" | ")}` : ""}.`, { control: c, done: r.done });
     }
     case "maxey0_open_artifacts": {
       const shown = listArtifacts(w, args, 200);
@@ -401,6 +459,12 @@ async function uiAction(store: Store, w: Workspace, baseUrl: string, action: str
 
 // ---------------------------------------------------------------- artifacts
 const artifactKey = (id: string) => `art-${id}`;
+
+function findRun(w: Workspace, id: unknown): RunRecord {
+  const r = (w.runs ?? []).find((x) => x.id === id);
+  if (!r) throw new ToolError(`No run ${id}.`);
+  return r;
+}
 
 function slotMetas(w: Workspace): ArtifactMeta[] {
   return (w.slots ?? []).map((id) => (w.artifacts ?? []).find((a) => a.id === id)).filter((a): a is ArtifactMeta => !!a).slice(0, SLOT_MAX);

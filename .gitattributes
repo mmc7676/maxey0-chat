@@ -1,0 +1,7 @@
+# Keep line endings identical on every OS, so generated files rebuilt by `npm test` on Windows
+# match the committed ones and never block `git pull`.
+* text=auto eol=lf
+*.png binary
+*.webp binary
+*.zip binary
+*.pdf binary

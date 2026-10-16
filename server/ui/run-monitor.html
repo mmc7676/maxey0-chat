@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Maxey0 run monitor</title>
+<!-- Maxey0 run monitor: the default dashboard for a run sent from the Maxey0 app with Monitor on.
+     It is a projection of the run: SCW0 is the top-level object, every other SCW is drawn inside its
+     parent, and each step sits in its SCW with its agent, status, effort class and result.
+     Data comes in from the Maxey0 app as postMessage {maxey0Run: RunRecord}; the user's controls go back
+     out as postMessage {maxey0Control: {control, stepId?, text?}}. It has no network access of its own. -->
+<style>
+:root{--bg:#070a1a;--card:#10153a;--card2:#0b1030;--line:#273072;--ink:#e8ebff;--dim:#9aa3d6;--acc:#5b7cff;--ok:#34d399;--warn:#fbbf24;--bad:#f87171;--skip:#94a3b8;color-scheme:dark}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{padding:10px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.grow{flex:1;min-width:0}
+.meta{color:var(--dim);font-size:12px}.title{font-weight:600}
+header img{border-radius:8px}
+button{background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:5px 10px;font:inherit;cursor:pointer}
+button.primary{background:var(--acc);border-color:var(--acc);color:#fff}button:disabled{opacity:.5;cursor:default}
+button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+input{background:var(--card2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font:inherit;flex:1;min-width:140px}
+.bar{height:6px;border-radius:99px;background:var(--card2);overflow:hidden;margin:8px 0}.bar>i{display:block;height:100%;background:var(--ok);transition:width .3s}
+.counts span{margin-right:10px}
+.scw{border:1px solid var(--line);border-left:3px solid var(--acc);border-radius:10px;padding:8px;margin:8px 0;background:var(--card)}
+.scw .scw{background:var(--card2);margin-left:6px}
+.scw.st-running{border-left-color:var(--warn)}.scw.st-done{border-left-color:var(--ok)}.scw.st-failed{border-left-color:var(--bad)}
+.step{border:1px solid var(--line);border-radius:8px;padding:6px 8px;margin:6px 0}
+.step.st-running{border-color:var(--warn);box-shadow:0 0 0 1px var(--warn) inset}
+.chip{font-size:11px;padding:1px 8px;border-radius:999px;border:1px solid var(--line);color:var(--dim);white-space:nowrap}
+.chip.st-running{color:var(--warn);border-color:var(--warn)}.chip.st-done{color:var(--ok);border-color:var(--ok)}.chip.st-failed{color:var(--bad);border-color:var(--bad)}.chip.st-skipped{color:var(--skip);border-color:var(--skip)}
+.chip.agent{color:#c7d2ff;border-color:var(--acc)}
+.result{white-space:pre-wrap;color:var(--ink);margin-top:4px}
+.task{margin-top:3px}
+.log{max-height:none}.log div{border-top:1px solid var(--line);padding:3px 0}
+.paused{color:var(--warn);font-weight:600}
+.empty{padding:20px;text-align:center;color:var(--dim)}
+h3{font-size:12px;margin:12px 0 4px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+</style>
+</head>
+<body>
+<header class="row">
+  <img src="__LOGO__" width="32" height="32" alt="Maxey0 logo">
+  <div class="grow"><div class="title" id="title">Maxey0 run monitor</div><div class="meta" id="sub">Waiting for the run…</div></div>
+  <button type="button" id="pause" class="primary" disabled>Pause</button>
+</header>
+<div class="bar" aria-hidden="true"><i id="bar" style="width:0%"></i></div>
+<div class="meta counts" id="counts"></div>
+<div id="paused" class="paused" role="status"></div>
+<h3>Agents</h3><div class="row" id="agents"></div>
+<h3>SCW0 and everything inside it</h3><div id="tree"><div class="empty">Waiting for the run…</div></div>
+<h3>Note for the whole run</h3>
+<div class="row"><input id="note" placeholder="For example: keep each result under 200 words" aria-label="Note for the whole run"><button type="button" id="send">Send note</button></div>
+<h3>Timeline</h3><div class="log meta" id="log"></div>
+<script>
+(function () {
+  var run = null, stepNoteFor = null;
+  var $ = function (id) { return document.getElementById(id); };
+  function el(tag, attrs) {
+    var e = document.createElement(tag), kids = [].concat.apply([], Array.prototype.slice.call(arguments, 2).map(function (k) { return Array.isArray(k) ? [].concat.apply([], k) : [k]; }));
+    for (var k in attrs || {}) { if (k === "on") for (var ev in attrs.on) e.addEventListener(ev, attrs.on[ev]); else if (attrs[k] != null && attrs[k] !== false) e.setAttribute(k, attrs[k]); }
+    kids.forEach(function (c) { if (c != null && c !== false) e.append(c.nodeType ? c : String(c)); });
+    return e;
+  }
+  function control(c, stepId, text) { parent.postMessage({ maxey0Control: { control: c, stepId: stepId || null, text: text || null } }, "*"); }
+  function statusOf(s) { return run.control.skip.indexOf(s.id) >= 0 && (!s.status || s.status === "waiting") ? "skipped" : (s.status || "waiting"); }
+  function scwStatus(id) {
+    var ids = descendants(id), st = run.steps.filter(function (s) { return ids.indexOf(s.scw) >= 0; }).map(statusOf);
+    if (!st.length) return "";
+    if (st.indexOf("failed") >= 0) return "failed";
+    if (st.indexOf("running") >= 0) return "running";
+    return st.every(function (x) { return x === "done" || x === "skipped"; }) ? "done" : "";
+  }
+  function descendants(id) { var out = [id], grew = true; while (grew) { grew = false; run.scws.forEach(function (s) { if (out.indexOf(s.parent) >= 0 && out.indexOf(s.id) < 0) { out.push(s.id); grew = true; } }); } return out; }
+  function stepCard(s) {
+    var st = statusOf(s), skipped = run.control.skip.indexOf(s.id) >= 0;
+    var notes = run.control.notes.filter(function (n) { return n.stepId === s.id; });
+    return el("div", { "class": "step st-" + st, "data-step": s.id },
+      el("div", { "class": "row" }, el("span", { "class": "chip st-" + st }, st), s.agent ? el("span", { "class": "chip agent" }, s.agent) : null,
+        s.effort ? el("span", { "class": "chip" }, "effort: " + s.effort) : null, (s.skills || []).map(function (k) { return el("span", { "class": "chip" }, "/" + k); }),
+        el("span", { "class": "meta grow" }, s.id + (s.after && s.after.length ? " · after " + s.after.join(", ") : "")),
+        st === "waiting" || st === "skipped" ? el("button", { type: "button", on: { click: function () { control(skipped ? "unskip" : "skip", s.id); } } }, skipped ? "Don't skip" : "Skip") : null,
+        el("button", { type: "button", on: { click: function () { stepNoteFor = stepNoteFor === s.id ? null : s.id; draw(); } } }, "Note")),
+      el("div", { "class": "task" }, s.task || ""),
+      s.result ? el("div", { "class": "result" }, s.result) : null,
+      notes.map(function (n) { return el("div", { "class": "meta" }, "Your note: " + n.text); }),
+      stepNoteFor === s.id ? el("div", { "class": "row" }, el("input", { id: "note-" + s.id, placeholder: "Note for this step", "aria-label": "Note for " + s.id }),
+        el("button", { type: "button", on: { click: function () { var v = $("note-" + s.id).value.trim(); if (v) { control("note", s.id, v); stepNoteFor = null; } } } }, "Send")) : null);
+  }
+  function scwCard(w) {
+    var kids = run.scws.filter(function (x) { return x.parent === w.id && x.id !== w.id; });
+    var st = scwStatus(w.id);
+    return el("section", { "class": "scw" + (st ? " st-" + st : ""), "data-scw": w.id },
+      el("div", { "class": "row" }, el("span", { "class": "title" }, w.name || w.id), el("span", { "class": "meta" }, w.id), st ? el("span", { "class": "chip st-" + st }, st) : null),
+      w.desc ? el("div", { "class": "meta" }, w.desc) : null,
+      (w.files || []).length ? el("div", { "class": "meta" }, "Files: " + w.files.map(function (f) { return f.name; }).join(", ")) : null,
+      run.steps.filter(function (s) { return s.scw === w.id; }).map(stepCard),
+      kids.map(scwCard));
+  }
+  function draw() {
+    if (!run) return;
+    var n = run.steps.length, c = {};
+    run.steps.forEach(function (s) { var k = statusOf(s); c[k] = (c[k] || 0) + 1; });
+    var finished = (c.done || 0) + (c.failed || 0) + (c.skipped || 0);
+    $("title").textContent = run.title || "Maxey0 run";
+    $("sub").textContent = run.id + " · " + (run.done ? "finished" : run.control.paused ? "paused" : "in progress") + " · updated " + new Date(run.updatedAt).toLocaleTimeString();
+    $("bar").style.width = (n ? Math.round(100 * finished / n) : 0) + "%";
+    $("counts").replaceChildren.apply($("counts"), ["running", "waiting", "done", "failed", "skipped"].filter(function (k) { return c[k]; }).map(function (k) { return el("span", {}, c[k] + " " + k); }));
+    $("paused").textContent = run.control.paused && !run.done ? "Paused: Claude won't start new steps until you press Resume." : "";
+    var p = $("pause"); p.disabled = run.done; p.textContent = run.control.paused ? "Resume" : "Pause";
+    $("agents").replaceChildren.apply($("agents"), run.agents.length ? run.agents.map(function (a) { return el("span", { "class": "chip agent", title: a.role || "" }, a.name + (a.role ? " · " + a.role : "")); }) : [el("span", { "class": "meta" }, "No agents named.")]);
+    var focus = document.activeElement && document.activeElement.id, typed = {};
+    Array.prototype.forEach.call(document.querySelectorAll("#tree input"), function (i) { typed[i.id] = i.value; });
+    var root = run.scws.filter(function (s) { return s.id === "scw0"; })[0] || run.scws.filter(function (s) { return !s.parent; })[0];
+    var orphans = run.scws.filter(function (s) { return s !== root && !run.scws.some(function (p) { return p.id === s.parent; }); });
+    $("tree").replaceChildren.apply($("tree"), root ? [scwCard(root)].concat(orphans.map(scwCard)) : [el("div", { "class": "empty" }, "This run has no SCWs.")]);
+    for (var id in typed) if ($(id)) $(id).value = typed[id];
+    if (focus && $(focus)) $(focus).focus();
+    $("log").replaceChildren.apply($("log"), run.log.slice().reverse().map(function (l) { return el("div", {}, new Date(l.at).toLocaleTimeString() + "  " + l.text); }));
+  }
+  $("pause").addEventListener("click", function () { if (run) control(run.control.paused ? "resume" : "pause"); });
+  $("send").addEventListener("click", function () { var v = $("note").value.trim(); if (v) { control("note", null, v); $("note").value = ""; } });
+  window.addEventListener("message", function (e) {
+    var d = e.data;
+    if (d && typeof d === "object" && d.maxey0Run && Array.isArray(d.maxey0Run.steps)) { run = d.maxey0Run; draw(); }
+  });
+  parent.postMessage({ maxey0MonitorReady: true }, "*");
+})();
+</script>
+</body>
+</html>

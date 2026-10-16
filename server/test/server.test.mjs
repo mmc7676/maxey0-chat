@@ -64,7 +64,7 @@ test("JSON responses declare UTF-8, and the server reports its release version",
   const h = await raw("/health", { method: "GET" });
   assert.equal(h.headers.get("content-type"), "application/json; charset=utf-8");
   assert.equal((await h.json()).server.title, "Maxey0 \u00b7 SCWs");
-  assert.equal(SERVER_INFO.version, "0.3.1");
+  assert.equal(SERVER_INFO.version, "0.4.0");
   const m = await raw(`/mcp/${KEY}`, { method: "POST", body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }) });
   assert.equal(m.headers.get("content-type"), "application/json; charset=utf-8");
 });
@@ -74,7 +74,7 @@ test("Maxey0 app: resource carries the builder, the tile code and its CSP", asyn
   const c = (await rpc("resources/read", { uri: "ui://maxey0/app.html" })).result.contents[0];
   assert.equal(c.mimeType, "text/html;profile=mcp-app");
   assert.ok(c._meta.ui.csp.resourceDomains.includes("https://cdn.jsdelivr.net"));
-  for (const s of ["window.Maxey0=", "parseWorkflow", "ui/message", "ui/open-link", "ui/request-display-mode", "maxey0_app_action", "artifact_get", "Maxey0 0.3.1"]) assert.ok(c.text.includes(s), s);
+  for (const s of ["window.Maxey0=", "parseWorkflow", "ui/message", "ui/open-link", "ui/request-display-mode", "maxey0_app_action", "artifact_get", "Maxey0 0.4.0"]) assert.ok(c.text.includes(s), s);
   assert.ok(!/new Function\(/.test(c.text.split("window.Maxey0=")[1] ?? ""), "tile code runs without eval");
 });
 test("Maxey0 app: slots are validated, capped at 4, saved, and returned with the tray", async () => {
@@ -117,4 +117,26 @@ test("one version across Maxey0-Chat: connector, both views, builder, skill, plu
   assert.ok(r("../src/app-ui-html.ts").includes(`Maxey0 ${v}`), "app view");
   assert.ok(r("../src/artifacts-ui-html.ts").includes(`name:\\"maxey0-artifacts\\",version:\\"${v}\\"`), "artifacts board view");
   assert.ok(r("../../README.md").includes(`Version ${v},`) && r("../../plugins/maxey0/README.md").startsWith(`# Maxey0 (v${v})`), "READMEs");
+});
+
+test("monitored run: start from the app, Claude reports progress, the user's controls come back to Claude", async () => {
+  const { call } = mk();
+  const state = { scws: [{ id: "scw0", name: "SCW0", parent: null }, { id: "scw1", name: "Research", parent: "scw0" }], agents: [{ name: "Maxey1", role: "maker" }],
+    steps: [{ id: "s1", scw: "scw1", agent: "Maxey1", task: "research", skills: ["deep-research"], after: [] }, { id: "s2", scw: "scw1", agent: "", task: "summarize", skills: [], after: ["s1"] }] };
+  const empty = await call("maxey0_app_action", { action: "run.start", state: { steps: [] } }); assert.equal(empty.isError, true);
+  const r = (await call("maxey0_app_action", { action: "run.start", state, title: "Run: research" })).structuredContent.run;
+  assert.match(r.id, /^run-/); assert.deepEqual(r.steps.map((s) => s.status), ["waiting", "waiting"]); assert.equal(r.scws[1].parent, "scw0");
+  const u1 = await call("maxey0_run_update", { runId: r.id, steps: [{ id: "s1", status: "running", effort: "judgment" }], log: "started s1" });
+  assert.deepEqual(u1.structuredContent.control, { paused: false, skip: [], notes: [] });
+  await call("maxey0_app_action", { action: "run.control", runId: r.id, control: "pause" });
+  await call("maxey0_app_action", { action: "run.control", runId: r.id, control: "skip", stepId: "s2" });
+  await call("maxey0_app_action", { action: "run.control", runId: r.id, control: "note", stepId: "s1", text: "cite sources" });
+  assert.equal((await call("maxey0_app_action", { action: "run.control", runId: r.id, control: "skip", stepId: "nope" })).isError, true);
+  const u2 = await call("maxey0_run_update", { runId: r.id, steps: [{ id: "s1", status: "done", result: "3 sources" }, { id: "s2", status: "skipped" }], done: true });
+  assert.match(u2.content[0].text, /PAUSED/); assert.match(u2.content[0].text, /skip s2/); assert.match(u2.content[0].text, /s1: cite sources/);
+  const got = (await call("maxey0_app_action", { action: "run.get", runId: r.id })).structuredContent.run;
+  assert.equal(got.done, true); assert.equal(got.steps[0].result, "3 sources"); assert.equal(got.steps[0].effort, "judgment");
+  assert.ok(got.log.some((l) => l.text === "started s1")); assert.ok(got.log.some((l) => /You: note s1/.test(l.text)));
+  const open = await call("maxey0_open_app", { runId: r.id }); assert.equal(open.structuredContent.run.id, r.id);
+  assert.equal((await call("maxey0_run_update", { runId: "run-missing" })).isError, true);
 });

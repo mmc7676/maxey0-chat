@@ -6,6 +6,7 @@ import { ArtifactMeta, RENDERED_KINDS, tileDocument } from "../src/artifacts";
 
 declare const __LOGO__: string;
 declare const __VERSION__: string;
+declare const __MONITOR__: string;
 type Json = Record<string, any>;
 
 const PROTOCOL = "2026-01-26";
@@ -32,6 +33,10 @@ let focused = -1;
 let collapsed = false;
 let hostReady = false;
 let gotResult = false;
+let monitorRun: Json | null = null;
+let monitorFrame: HTMLIFrameElement | null = null;
+let monitorTimer: number | undefined;
+let closed = false;
 
 // ---------------------------------------------------------------- host bridge
 let nextId = 1;
@@ -53,20 +58,42 @@ async function callTool(name: string, args: Json): Promise<Json> {
 
 // The builder's Run button calls sendPrompt(text). In the inline widget that is the chat's own function;
 // here it becomes an MCP Apps ui/message, which the host sends as the user's next message.
-(window as any).sendPrompt = (text: string) =>
-  request("ui/message", { role: "user", content: [{ type: "text", text }] })
+// With "Monitor" ticked, a Run is first recorded on the server as a monitored run, its id goes into the
+// message so Claude reports progress against it, and the Artifacts section is replaced by the live monitor.
+(window as any).sendPrompt = async (text: string) => {
+  const RUN = "Maxey0: run ";
+  const monitor = (document.getElementById("monitor-next") as HTMLInputElement | null)?.checked;
+  if (monitor && text.startsWith(RUN)) {
+    try {
+      const state = JSON.parse(text.slice(RUN.length));
+      const firstTask = (state.steps?.[0]?.task || "").replace(/\/[\w:.-]+/g, "").trim();
+      const r = await callTool("maxey0_app_action", { action: "run.start", state, title: firstTask ? `Run: ${firstTask.slice(0, 60)}` : "Maxey0 run" });
+      text = RUN + JSON.stringify({ ...state, runId: r.run.id, monitor: true });
+      enterMonitor(r.run);
+    } catch (e) { setNote(`Couldn't start the monitor (${(e as Error).message}); sending the run without it.`); }
+  }
+  return request("ui/message", { role: "user", content: [{ type: "text", text }] })
     .then((r) => { if (r?.isError) throw new Error("the chat did not accept the message"); })
     .catch((e: Error) => setNote(`Couldn't send the run to the chat: ${e.message}. Copy it instead: ${text.slice(0, 200)}…`));
+};
 
 window.addEventListener("message", (e: MessageEvent) => {
   const d = e.data;
   if (d && typeof d === "object" && "maxey0Tile" in d) return onTileMessage(e);
+  if (monitorFrame && e.source === monitorFrame.contentWindow) return onMonitorMessage(d);
   if (e.source !== window.parent || !d || d.jsonrpc !== "2.0") return;
   if (d.id !== undefined && pending.has(d.id)) {
     const p = pending.get(d.id)!; pending.delete(d.id);
     return d.error ? p.reject(new Error(d.error.message || "host error")) : p.resolve(d.result);
   }
-  if (d.method === "ui/notifications/tool-result") { gotResult = true; accept(d.params?.structuredContent ?? {}); }
+  if (d.method === "ui/notifications/tool-result") {
+    gotResult = true;
+    // The host replays this result each time the chat is reloaded, so it can hold tiles that were removed
+    // since. Use it for the builder and tray, and take the tiles from the server's saved state.
+    const sc = d.params?.structuredContent ?? {};
+    accept({ ...sc, slots: undefined });
+    callTool("maxey0_open_app", {}).then((live) => applySlots(live.slots)).catch(() => applySlots(sc.slots));
+  }
   if (d.method === "ui/resource-teardown" && d.id !== undefined) window.parent.postMessage({ jsonrpc: "2.0", id: d.id, result: {} }, "*");
 });
 
@@ -75,12 +102,73 @@ function accept(sc: Json) {
   if (sc.builder !== undefined) mountBuilder(sc.builder || {});
   if (Array.isArray(sc.tray)) { tray = sc.tray; trayTotal = Number(sc.trayTotal) || tray.length; trayShown = TRAY_PAGE; }
   if (typeof sc.query === "string") (document.getElementById("tray-q") as HTMLInputElement).value = sc.query;
-  if (Array.isArray(sc.slots)) {
-    const want: ArtifactMeta[] = sc.slots.slice(0, SLOT_MAX);
-    want.forEach((m, i) => { if (slots[i].meta?.id !== m.id || slots[i].meta?.version !== m.version) place(i, m, false); });
-    for (let i = want.length; i < SLOT_MAX; i++) if (slots[i].meta) clearSlot(i, false);
-  }
+  applySlots(sc.slots);
+  if (sc.run && Array.isArray(sc.run.steps)) enterMonitor(sc.run);
   drawTray(); drawHeader();
+}
+
+function applySlots(list: unknown) {
+  if (!Array.isArray(list) || closed) return;
+  const want: ArtifactMeta[] = list.slice(0, SLOT_MAX);
+  want.forEach((m, i) => { if (slots[i].meta?.id !== m.id || slots[i].meta?.version !== m.version) place(i, m, false); });
+  for (let i = want.length; i < SLOT_MAX; i++) if (slots[i].meta) clearSlot(i, false);
+  drawTray(); drawHeader();
+}
+
+// ---------------------------------------------------------------- run monitor
+/** Replace the Artifacts section with the run monitor (the tiles keep their place and come back with
+ *  "Back to artifact tiles"). The monitor is a sandboxed frame fed by polling the server every 3 s. */
+function enterMonitor(run: Json) {
+  monitorRun = run;
+  document.getElementById("arts")!.hidden = true;
+  const sec = document.getElementById("mon")!; sec.hidden = false;
+  if (!monitorFrame) {
+    monitorFrame = document.createElement("iframe");
+    monitorFrame.setAttribute("sandbox", "allow-scripts");
+    monitorFrame.setAttribute("title", "Maxey0 run monitor");
+    monitorFrame.className = "frame";
+    monitorFrame.srcdoc = __MONITOR__;
+    document.getElementById("mon-body")!.replaceChildren(monitorFrame);
+  }
+  pushRun();
+  clearInterval(monitorTimer);
+  monitorTimer = window.setInterval(pollRun, 3000);
+}
+
+function leaveMonitor() {
+  clearInterval(monitorTimer);
+  document.getElementById("mon")!.hidden = true;
+  document.getElementById("arts")!.hidden = false;
+}
+
+function pushRun() { if (monitorFrame?.contentWindow && monitorRun) monitorFrame.contentWindow.postMessage({ maxey0Run: monitorRun }, "*"); document.getElementById("mon-status")!.textContent = monitorRun ? `${monitorRun.id} · ${monitorRun.done ? "finished" : "live, updates every 3 s"}` : ""; }
+
+async function pollRun() {
+  if (!monitorRun || !hostReady) return;
+  try { const r = await callTool("maxey0_app_action", { action: "run.get", runId: monitorRun.id }); monitorRun = r.run; pushRun(); if (monitorRun?.done) clearInterval(monitorTimer); }
+  catch (e) { document.getElementById("mon-status")!.textContent = `Couldn't refresh the run: ${(e as Error).message}`; }
+}
+
+async function onMonitorMessage(d: any) {
+  if (d?.maxey0MonitorReady) return pushRun();
+  const c = d?.maxey0Control; if (!c || !monitorRun) return;
+  try { const r = await callTool("maxey0_app_action", { action: "run.control", runId: monitorRun.id, control: c.control, stepId: c.stepId ?? undefined, text: c.text ?? undefined }); monitorRun = r.run; pushRun(); }
+  catch (e) { document.getElementById("mon-status")!.textContent = `Couldn't send that: ${(e as Error).message}`; }
+}
+
+/** Close: stop every tile and the monitor and fold Maxey0 to one line. Tiles stay saved on the server. */
+function setClosed(on: boolean) {
+  closed = on;
+  document.body.classList.toggle("closed", on);
+  if (on) {
+    slots.forEach((s, i) => { if (s.frame) { s.frame = undefined; s.state = "empty"; s.el.body.replaceChildren(); drawSlot(i); } });
+    clearInterval(monitorTimer);
+  } else {
+    const metas = slots.map((s) => s.meta).filter(Boolean) as ArtifactMeta[];
+    slots.forEach((s) => { s.meta = null; });
+    applySlots(metas);
+    if (monitorRun && !document.getElementById("mon")!.hidden) enterMonitor(monitorRun);
+  }
 }
 
 function mountBuilder(state: Json) {
@@ -285,11 +373,18 @@ function onSearch() {
 
 function mount() {
   document.body.append(
+    h("div", { id: "closed-bar", class: "row" }, h("span", { class: "grow meta" }, `Maxey0 ${__VERSION__} is closed. Your tiles are saved.`), h("button", { type: "button", on: { click: () => setClosed(false) } }, "Reopen")),
     h("div", { id: "builder" }, h("p", { class: "meta" }, "Loading Maxey0…")),
+    h("label", { class: "row monitor-opt" }, h("input", { type: "checkbox", id: "monitor-next" }), "Monitor the next Run here: live status, pause, skip and notes"),
+    h("section", { id: "mon", hidden: "" },
+      h("div", { class: "row arts-head" }, h("span", { class: "title grow" }, "Run monitor"), h("span", { class: "meta", id: "mon-status" }, ""),
+        h("button", { type: "button", on: { click: leaveMonitor } }, "Back to artifact tiles")),
+      h("div", { id: "mon-body", class: "tbody tall mon-body" })),
     h("section", { id: "arts" },
       h("div", { class: "row arts-head" },
         h("button", { type: "button", id: "arts-toggle", class: "toggle", on: { click: () => { collapsed = !collapsed; drawHeader(); } } }, ""),
-        h("span", { class: "meta grow" }, `Maxey0 ${__VERSION__}`)),
+        h("span", { class: "meta grow" }, `Maxey0 ${__VERSION__}`),
+        h("button", { type: "button", on: { click: () => setClosed(true) } }, "Close Maxey0")),
       h("div", { id: "arts-body" },
         h("div", { class: "lbl" }, "Import"),
         h("div", { class: "meta" }, "Drag an artifact onto a tile, or tap an artifact and then tap a tile."),
