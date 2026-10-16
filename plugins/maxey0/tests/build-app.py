@@ -23,7 +23,7 @@ app = (
     + "function mount(state){var root=document.getElementById(\"m0\");if(!root||root.dataset.mounted)return;root.dataset.mounted=\"1\";"
     + "root.innerHTML=\"<style>\"+CSS+\"</style>\"+HTML;\n"
     + js.strip() + "\n}\n"
-    + "window.Maxey0={version:\"3.1.0\",mount:mount,parseWorkflow:parseWorkflow,stagesOf:stagesOf};\n"
+    + "window.Maxey0={version:\"0.3.0\",mount:mount,parseWorkflow:parseWorkflow,stagesOf:stagesOf};\n"
     + "mount(window.MAXEY0||{});\n})();\n"
 )
 out.parent.mkdir(parents=True, exist_ok=True)

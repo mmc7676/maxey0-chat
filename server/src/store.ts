@@ -9,7 +9,10 @@ export interface Loop { id: string; name: string; agentIds: string[]; maxIterati
 export interface Gate { id: string; scwId: string; rule: string; mode: "allow" | "deny" | "ask" }
 export interface Plan { id: string; goal: string; scwIds: string[]; agentIds: string[]; loopIds: string[]; gateIds: string[]; status: "submitted" | "running" | "done" | "failed"; createdAt: string; runLog: { at: string; status: string; summary: string }[] }
 export interface ScwEvent { at: string; kind: "read" | "write" | "denied"; agent: string | null; scw: string; detail: string }
-export interface Workspace { id: string; scws: Scw[]; agents: Agent[]; loops: Loop[]; gates: Gate[]; plans: Plan[]; events?: ScwEvent[]; artifacts?: ArtifactMeta[]; updatedAt: string }
+export interface Workspace { id: string; scws: Scw[]; agents: Agent[]; loops: Loop[]; gates: Gate[]; plans: Plan[]; events?: ScwEvent[]; artifacts?: ArtifactMeta[]; slots?: string[]; updatedAt: string }
+
+/** A short-lived capability: an upload link for one SCW, or a read-only view of one artifact version. */
+export interface Ticket { ws: string; scwId: string; artifactId?: string; version?: number }
 
 export interface Store {
   getWorkspace(ws: string): Promise<Workspace>;
@@ -17,8 +20,8 @@ export interface Store {
   getFile(ws: string, fileId: string): Promise<string | null>;
   putFile(ws: string, fileId: string, data: string): Promise<void>;
   deleteFile(ws: string, fileId: string): Promise<void>;
-  putTicket(ticket: string, value: { ws: string; scwId: string }, ttlSeconds: number): Promise<void>;
-  getTicket(ticket: string): Promise<{ ws: string; scwId: string } | null>;
+  putTicket(ticket: string, value: Ticket, ttlSeconds: number): Promise<void>;
+  getTicket(ticket: string): Promise<Ticket | null>;
 }
 
 export const emptyWorkspace = (id: string): Workspace => ({ id, scws: [], agents: [], loops: [], gates: [], plans: [], events: [], updatedAt: new Date().toISOString() });
@@ -37,7 +40,7 @@ export class KVStore implements Store {
   getFile(ws: string, id: string) { return this.kv.get(`file:${ws}:${id}`); }
   putFile(ws: string, id: string, data: string) { return this.kv.put(`file:${ws}:${id}`, data); }
   deleteFile(ws: string, id: string) { return this.kv.delete(`file:${ws}:${id}`); }
-  putTicket(t: string, v: { ws: string; scwId: string }, ttl: number) { return this.kv.put(`ticket:${t}`, JSON.stringify(v), { expirationTtl: Math.max(60, ttl) }); }
+  putTicket(t: string, v: Ticket, ttl: number) { return this.kv.put(`ticket:${t}`, JSON.stringify(v), { expirationTtl: Math.max(60, ttl) }); }
   async getTicket(t: string) { const v = await this.kv.get(`ticket:${t}`); return v ? JSON.parse(v) : null; }
 }
 

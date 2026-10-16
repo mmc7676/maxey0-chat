@@ -223,7 +223,7 @@ async function start() {
   mount();
   draw();
   try {
-    await request("ui/initialize", { protocolVersion: PROTOCOL, clientInfo: { name: "maxey0-artifacts", version: "1.0.0" }, capabilities: {}, appCapabilities: { availableDisplayModes: ["inline", "fullscreen"] } });
+    await request("ui/initialize", { protocolVersion: PROTOCOL, clientInfo: { name: "maxey0-artifacts", version: "0.3.0" }, capabilities: {}, appCapabilities: { availableDisplayModes: ["inline", "fullscreen"] } });
     hostReady = true;
     notify("ui/notifications/initialized", {});
     if (!order.length) await refresh();

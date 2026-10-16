@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "Maxey0: Structured Context Worlds, agents and workflows with an inline dashboard.",
-    "version": "3.3.0"
+    "version": "0.3.0"
   },
   "plugins": [
     {
       "name": "maxey0",
       "source": "./plugins/maxey0",
-      "description": "Set up SCWs, agents and workflows in an inline dashboard or by typing, then run and monitor them. No connector required.",
-      "version": "3.3.0"
+      "description": "Set up SCWs, agents and workflows in an app drawn in the chat, with up to 4 live artifact tiles when the Maxey0 connector is connected.",
+      "version": "0.3.0"
     }
   ]
 }

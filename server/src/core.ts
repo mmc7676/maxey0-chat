@@ -3,13 +3,17 @@
 import { Store, Workspace, Scw, Agent, Loop, Gate, Plan, ScwFile, ScwEvent } from "./store";
 import { DASHBOARD_HTML } from "./ui-html";
 import { ARTIFACTS_HTML } from "./artifacts-ui-html";
-import { ArtifactMeta, ArtifactKind, ARTIFACT_KINDS, RESOURCE_DOMAINS, checkArtifact, kindOf, sha256Hex } from "./artifacts";
+import { APP_HTML } from "./app-ui-html";
+import { ArtifactMeta, ArtifactKind, ARTIFACT_KINDS, RESOURCE_DOMAINS, checkArtifact, kindOf, sha256Hex, tileDocument } from "./artifacts";
 
 export const EFFORT_RULE = "Effort on every input: classify each step by what would catch a wrong answer. Mechanical (a test, parse, count, exit code or tool check settles it): one pass, no second opinion. Judgment (nothing mechanical settles it): effort rises with the cost of a wrong answer; verify what is cheap to verify, and have a checker that did not make the work review it. An explicit effort instruction from the user wins. Report what was checked, and by what, separately from what was not.";
-export const SERVER_INFO = { name: "maxey0", title: "Maxey0 · SCWs", version: "3.3.1" };
+export const SERVER_INFO = { name: "maxey0", title: "Maxey0 · SCWs", version: "0.3.0" };
 export const UI_URI = "ui://maxey0/dashboard.html";
 export const UI_MIME = "text/html;profile=mcp-app";
 export const ARTIFACTS_UI_URI = "ui://maxey0/artifacts.html";
+export const APP_UI_URI = "ui://maxey0/app.html";
+export const SLOT_MAX = 4;
+const LINK_TTL_SECONDS = 600;
 const SUPPORTED_VERSIONS = ["2026-07-28", "2025-11-25", "2025-06-18", "2025-03-26"];
 const MAX_FILE_BYTES = 4 * 1024 * 1024;     // per file (KV allows 25 MB; kept small for tool payloads)
 const MAX_READ_CHARS = 100_000;             // keeps tool results well under Claude's ~150k-char hydration limit
@@ -28,9 +32,28 @@ const uiMeta = { ui: { resourceUri: UI_URI }, "ui/resourceUri": UI_URI };
 const appOnly = { ui: { resourceUri: UI_URI, visibility: ["app"] } };
 const artifactsUi = { ui: { resourceUri: ARTIFACTS_UI_URI }, "ui/resourceUri": ARTIFACTS_UI_URI };
 const artifactsAppOnly = { ui: { resourceUri: ARTIFACTS_UI_URI, visibility: ["app"] } };
+const appUi = { ui: { resourceUri: APP_UI_URI }, "ui/resourceUri": APP_UI_URI };
+const appUiOnly = { ui: { resourceUri: APP_UI_URI, visibility: ["app"] } };
 const ARTIFACT_ID = /^[A-Za-z0-9._-]{1,80}$/;
 
 export const TOOLS: Json[] = [
+  {
+    name: "maxey0_open_app",
+    title: "Open Maxey0",
+    description: `Opens Maxey0 in the chat: the workflow builder (SCWs, agents, steps, Run) with an Artifacts section of up to ${SLOT_MAX} live artifact tiles and an import tray. Use for /maxey0, "open Maxey0", a workflow to visualize, or a request to put specific artifacts side by side. Pass state.input with the user's workflow text exactly as written; pass slots with up to ${SLOT_MAX} artifact ids (from artifact_list) to place them in the tiles. Omitted slots keep the saved ones.`,
+    inputSchema: { type: "object", properties: {
+      state: { type: "object", description: "Builder state: {input} for a typed workflow, or the latest {scws, agents, steps, run} to redraw a run." },
+      slots: { type: "array", items: { type: "string" }, maxItems: SLOT_MAX, description: "Artifact ids to place in the tiles, in order." },
+      query: { type: "string", description: "Pre-fill the import tray's search." } } },
+    _meta: appUi,
+  },
+  {
+    name: "maxey0_app_action",
+    title: "Maxey0 app action (app)",
+    description: "App-only: save the artifact tile slots, or create a short-lived link that opens one artifact full screen outside the chat.",
+    inputSchema: { type: "object", properties: { action: { type: "string", enum: ["slots.set", "artifact.link"] }, ids: { type: "array", items: { type: "string" } }, id: { type: "string" } }, required: ["action"] },
+    _meta: appUiOnly,
+  },
   {
     name: "maxey0_open_dashboard",
     title: "Open the Maxey0 SCW dashboard",
@@ -243,6 +266,37 @@ export async function callTool(store: Store, wsId: string, baseUrl: string, name
     }
     case "maxey0_ui_action":
       return uiAction(store, w, baseUrl, String(args.action), (args.payload ?? {}) as Json);
+    case "maxey0_open_app": {
+      if (Array.isArray(args.slots)) {
+        const ids = strArr(args.slots);
+        const missing = ids.filter((id) => !(w.artifacts ?? []).some((a) => a.id === id));
+        if (missing.length) throw new ToolError(`No artifact with id ${missing.join(", ")}. Use artifact_list to find ids.`);
+        if (ids.length > SLOT_MAX) throw new ToolError(`At most ${SLOT_MAX} tiles; got ${ids.length}.`);
+        w.slots = [...new Set(ids)];
+        await store.putWorkspace(w);
+      }
+      const slots = slotMetas(w);
+      const tray = listArtifacts(w, { query: args.query }, 50);
+      const st = args.state && typeof args.state === "object" ? args.state : null;
+      return text(`Opened Maxey0: builder${st?.input ? " with the workflow" : ""}, ${slots.length} of ${SLOT_MAX} artifact tile(s)${slots.length ? `: ${slots.map((a) => a.title).join("; ")}` : ""}. ${tray.total} artifact(s) available to import.`,
+        { builder: st, slots, tray: tray.items, trayTotal: tray.total, query: str(args.query, 200) || null, slotMax: SLOT_MAX });
+    }
+    case "maxey0_app_action": {
+      if (args.action === "slots.set") {
+        const ids = [...new Set(strArr(args.ids))].filter((id) => (w.artifacts ?? []).some((a) => a.id === id));
+        if (ids.length > SLOT_MAX) throw new ToolError(`At most ${SLOT_MAX} tiles.`);
+        w.slots = ids; await store.putWorkspace(w);
+        return text(`Saved ${ids.length} tile(s).`, { slots: slotMetas(w) });
+      }
+      if (args.action === "artifact.link") {
+        const a = (w.artifacts ?? []).find((x) => x.id === args.id);
+        if (!a) throw new ToolError(`No artifact ${args.id}.`);
+        const t = crypto.randomUUID().replace(/-/g, "");
+        await store.putTicket(t, { ws: w.id, scwId: "", artifactId: a.id, version: a.version }, LINK_TTL_SECONDS);
+        return text(`Link for ${a.title}, valid ${LINK_TTL_SECONDS / 60} minutes.`, { url: `${baseUrl}/a/${t}`, expiresInSeconds: LINK_TTL_SECONDS });
+      }
+      throw new ToolError(`Unknown app action: ${args.action}`);
+    }
     case "maxey0_open_artifacts": {
       const shown = listArtifacts(w, args, 200);
       return text(`Opened the Maxey0 artifacts board: ${shown.total} artifact(s)${args.query ? ` matching "${str(args.query, 80)}"` : ""}.`, { artifacts: shown.items, total: shown.total, query: str(args.query, 200) || null, kind: args.kind ?? null, ids: Array.isArray(args.ids) ? strArr(args.ids) : null });
@@ -348,6 +402,10 @@ async function uiAction(store: Store, w: Workspace, baseUrl: string, action: str
 // ---------------------------------------------------------------- artifacts
 const artifactKey = (id: string) => `art-${id}`;
 
+function slotMetas(w: Workspace): ArtifactMeta[] {
+  return (w.slots ?? []).map((id) => (w.artifacts ?? []).find((a) => a.id === id)).filter((a): a is ArtifactMeta => !!a).slice(0, SLOT_MAX);
+}
+
 function listArtifacts(w: Workspace, args: Json, limit: number, offset = 0) {
   let all = [...(w.artifacts ?? [])];
   const ids = Array.isArray(args.ids) ? strArr(args.ids) : null;
@@ -409,15 +467,16 @@ export async function handleRpc(store: Store, wsId: string, baseUrl: string, msg
           protocolVersion: SUPPORTED_VERSIONS.includes(req) ? req : "2025-06-18",
           capabilities: { tools: { listChanged: false }, resources: { listChanged: false }, extensions: { "io.modelcontextprotocol/ui": {} } },
           serverInfo: SERVER_INFO,
-          instructions: "Maxey0 manages Structured Context Worlds (SCWs). Call maxey0_open_dashboard to show the interactive dashboard. When the user says 'Maxey0: execute plan <id>', call maxey0_get_plan and follow its instructions as the orchestrator. " + EFFORT_RULE,
+          instructions: "Maxey0 manages Structured Context Worlds (SCWs) and stored artifacts. Call maxey0_open_app to open Maxey0 (workflow builder plus up to 4 artifact tiles); maxey0_open_artifacts shows every stored artifact as a board. When the user says 'Maxey0: execute plan <id>', call maxey0_get_plan and follow its instructions as the orchestrator. " + EFFORT_RULE,
         });
       }
       case "ping": return rpcResult(id, {});
       case "tools/list": return rpcResult(id, { tools: TOOLS });
-      case "resources/list": return rpcResult(id, { resources: [{ uri: UI_URI, name: "Maxey0 dashboard", mimeType: UI_MIME, description: "Interactive Maxey0 SCW dashboard" }, { uri: ARTIFACTS_UI_URI, name: "Maxey0 artifacts", mimeType: UI_MIME, description: "Stored artifacts as live tiles" }] });
+      case "resources/list": return rpcResult(id, { resources: [{ uri: UI_URI, name: "Maxey0 dashboard", mimeType: UI_MIME, description: "Interactive Maxey0 SCW dashboard" }, { uri: ARTIFACTS_UI_URI, name: "Maxey0 artifacts", mimeType: UI_MIME, description: "Stored artifacts as live tiles" }, { uri: APP_UI_URI, name: "Maxey0", mimeType: UI_MIME, description: "Workflow builder with up to 4 artifact tiles" }] });
       case "resources/templates/list": return rpcResult(id, { resourceTemplates: [] });
       case "prompts/list": return rpcResult(id, { prompts: [] });
       case "resources/read": {
+        if (params.uri === APP_UI_URI) return rpcResult(id, { contents: [{ uri: APP_UI_URI, mimeType: UI_MIME, text: APP_HTML, _meta: { ui: { prefersBorder: false, csp: { resourceDomains: RESOURCE_DOMAINS } } } }] });
         if (params.uri === ARTIFACTS_UI_URI) return rpcResult(id, { contents: [{ uri: ARTIFACTS_UI_URI, mimeType: UI_MIME, text: ARTIFACTS_HTML, _meta: { ui: { prefersBorder: false, csp: { resourceDomains: RESOURCE_DOMAINS } } } }] });
         if (params.uri !== UI_URI) return rpcError(id, -32002, `Resource not found: ${params.uri}`);
         return rpcResult(id, { contents: [{ uri: UI_URI, mimeType: UI_MIME, text: DASHBOARD_HTML, _meta: { ui: { prefersBorder: false } } }] });
@@ -435,10 +494,14 @@ export async function handleRpc(store: Store, wsId: string, baseUrl: string, msg
   }
 }
 
+// A full-screen artifact page runs untrusted artifact code on this server's host. "sandbox" gives it an
+// opaque origin (no access to this origin's storage or cookies); the rest mirrors the in-chat tile policy.
+const R = RESOURCE_DOMAINS.join(" ");
+const ARTIFACT_PAGE_CSP = `sandbox allow-scripts allow-popups allow-forms; default-src 'none'; script-src 'unsafe-inline' ${R}; style-src 'unsafe-inline' ${R}; img-src data: blob: ${R}; font-src data: ${R}; media-src data: blob: ${R}; connect-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'`;
 const JSON_UTF8 = { "Content-Type": "application/json; charset=utf-8" };
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST, GET, OPTIONS", "Access-Control-Allow-Headers": "content-type, mcp-protocol-version, mcp-session-id, authorization, accept", "Access-Control-Expose-Headers": "mcp-session-id" };
 
-/** Entry point. Routes: POST /mcp/<WORKSPACE_KEY> (MCP), GET|POST /u/<ticket> (upload page), GET / (health). */
+/** Entry point. Routes: POST /mcp/<WORKSPACE_KEY> (MCP), GET|POST /u/<ticket> (upload page), GET /a/<ticket> (one artifact, full screen), GET / (health). */
 export async function handleRequest(req: Request, store: Store, opts: { workspaceKey: string }): Promise<Response> {
   const url = new URL(req.url);
   const baseUrl = `${url.protocol}//${url.host}`;
@@ -460,7 +523,7 @@ export async function handleRequest(req: Request, store: Store, opts: { workspac
 
   if (parts[0] === "u" && parts[1]) {
     const ticket = await store.getTicket(parts[1]);
-    if (!ticket) return new Response(uploadPage("This upload link has expired. Open a new one from the Maxey0 dashboard.", null), { status: 410, headers: { "Content-Type": "text/html; charset=utf-8" } });
+    if (!ticket || ticket.artifactId) return new Response(uploadPage("This upload link has expired. Open a new one from the Maxey0 dashboard.", null), { status: 410, headers: { "Content-Type": "text/html; charset=utf-8" } });
     const w = await store.getWorkspace(ticket.ws);
     const scw = w.scws.find((s) => s.id === ticket.scwId);
     if (!scw) return new Response(uploadPage("That SCW no longer exists.", null), { status: 404, headers: { "Content-Type": "text/html; charset=utf-8" } });
@@ -480,6 +543,18 @@ export async function handleRequest(req: Request, store: Store, opts: { workspac
       return new Response(uploadPage(`Added to “${scw.name}”: ${added.join(", ") || "nothing"}. Return to Claude and tap Refresh in the dashboard.`, scw.name), { headers: { "Content-Type": "text/html; charset=utf-8" } });
     }
     return new Response(uploadPage(null, scw.name), { headers: { "Content-Type": "text/html; charset=utf-8" } });
+  }
+
+  if (parts[0] === "a" && parts[1] && req.method === "GET") {
+    const t = await store.getTicket(parts[1]);
+    const page = (status: number, body: string) => new Response(body, { status, headers: { "Content-Type": "text/html; charset=utf-8", "Content-Security-Policy": ARTIFACT_PAGE_CSP, "Referrer-Policy": "no-referrer", "X-Content-Type-Options": "nosniff", "Cache-Control": "no-store" } });
+    if (!t || !t.artifactId) return page(410, "<!doctype html><title>Link expired</title><p>This link has expired. Open the artifact again from Maxey0 in Claude.</p>");
+    const w = await store.getWorkspace(t.ws);
+    const a = (w.artifacts ?? []).find((x) => x.id === t.artifactId);
+    if (!a || a.version !== t.version) return page(410, "<!doctype html><title>Link expired</title><p>This artifact changed or was removed. Open it again from Maxey0 in Claude.</p>");
+    const code = await store.getFile(w.id, artifactKey(a.id));
+    if (code == null) return page(404, "<!doctype html><p>Artifact content is missing.</p>");
+    return page(200, tileDocument(a.kind, code, `${a.id}#${a.version}`).replace("<head>", `<head><title>${esc(a.title)}</title>`));
   }
 
   if (url.pathname === "/" || url.pathname === "/health") return Response.json({ ok: true, server: SERVER_INFO }, { headers: JSON_UTF8 });

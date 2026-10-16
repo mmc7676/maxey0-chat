@@ -1,22 +1,24 @@
-# Maxey0 (v3.3.0)
+# Maxey0 (v0.3.0)
 
-Set up **SCWs** (Structured Context Worlds: named containers for work), **agents** and **workflows** in a dashboard drawn in the chat, or by typing, then run them and watch their progress.
+Set up **SCWs** (Structured Context Worlds: named containers for work), **agents** and **workflows** in the Maxey0 app drawn in the chat, or by typing, then run them and watch their progress. With the Maxey0 connector, the app also holds up to 4 of your stored artifacts as live tiles.
 
 ## Install
 
-- **Claude app, web and mobile (recommended):** upload [`dist/maxey0-plugin-v3.3.0.zip`](https://github.com/mmc7676/maxey0-chat/raw/main/dist/maxey0-plugin-v3.3.0.zip) in claude.ai under Customize > Plugins > Add > Upload plugin, then type `/` in any chat and pick **maxey0**. Remove any older Maxey0 plugin and any standalone `maxey0` skill first, so only one Maxey0 is installed.
-- **Skill only:** [`dist/maxey0-skill-v3.3.0.zip`](https://github.com/mmc7676/maxey0-chat/raw/main/dist/maxey0-skill-v3.3.0.zip) under Customize > Skills.
+- **Claude app (web, desktop, mobile):** Customize > Plugins > Add > **Add marketplace** > `mmc7676/maxey0-chat` (updates itself), or upload [`dist/maxey0-plugin-v0.3.0.zip`](https://github.com/mmc7676/maxey0-chat/raw/main/dist/maxey0-plugin-v0.3.0.zip) with Add > **Upload plugin**. Remove any other Maxey0 plugin or skill first.
 - **Claude Code:** `/plugin install maxey0 --marketplace mmc7676/maxey0-chat`, then `/maxey0:maxey0`.
+- **Connector (for artifact tiles):** deploy `server/` and add it under Customize > Connectors; see the repository README.
 
 ## Use
 
-- **`/maxey0`** opens the dashboard.
+- **`/maxey0`** opens Maxey0: the builder, and with the connector the **Artifacts** section below it.
 - **Type or paste a workflow** and press **Visualize**, for example `Launch SCW 5 in scw0`, `In scw5: research X /deep-research. Save to SCW5.` `syntax.md` in the skill lists what is understood.
-- **Place agents** by dragging (computer) or by tapping the agent and then the step (phone). Add worlds, steps and files, choose when a step starts, and turn on a checker loop.
-- **Run** sends the workflow to Maxey0, which runs ready steps at once (with subagents where available) and redraws the dashboard with each step's status and result.
+- **Place agents** on steps by dragging, or by tapping the agent and then the step. Add worlds, steps and files, choose when a step starts, and turn on a checker loop.
+- **Place artifacts** in up to 4 tiles the same way: drag one from the import tray onto a tile, or tap it and then tap the tile. Each tile can **Expand**, go **Full screen** inside Claude, or **Open outside ↗** in the browser (a link valid for 10 minutes). The Artifacts header collapses and expands the section; tiles keep running.
+- **Run** sends the workflow to Maxey0, which runs ready steps at once (with subagents where available) and redraws the app with each step's status and result.
+- Every input goes through the effort rule in section 0 of the skill.
 
 ## How it is built
 
-Claude sends a 443-byte widget that loads the dashboard from `cdn.jsdelivr.net`, pinned to commit `4551647e4939fbea2e5e993a825a45159354ae32` of this repository (`app/maxey0.js`). That keeps each render to one short tool call. The dashboard sends nothing anywhere except your **Run** message back into the chat.
+With the connector, `/maxey0` is one `maxey0_open_app` call; the server serves the app (`server/ui/app.ts` plus this folder's `app/maxey0.js`) as an MCP Apps view. Without it, Claude sends a 443-byte widget that loads `app/maxey0.js` from `cdn.jsdelivr.net`, pinned to commit `4551647e4939fbea2e5e993a825a45159354ae32` of this repository.
 
 `app/maxey0.js` is generated from `src/dashboard.src.html`, `src/parser.js` and `src/logo48.webp` by `tests/build-app.py`. Run `cd tests && npm install && npm test` to verify.

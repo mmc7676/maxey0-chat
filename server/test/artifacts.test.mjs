@@ -20,7 +20,7 @@ test("tools: artifact tools listed; get and report are app-only; open links the 
 
 test("resources: artifacts UI is listed, declares its CSP, embeds the logo and speaks ui/initialize", async () => {
   const { rpc } = mk();
-  assert.deepEqual((await rpc("resources/list")).result.resources.map((r) => r.uri), ["ui://maxey0/dashboard.html", "ui://maxey0/artifacts.html"]);
+  assert.deepEqual((await rpc("resources/list")).result.resources.map((r) => r.uri), ["ui://maxey0/dashboard.html", "ui://maxey0/artifacts.html", "ui://maxey0/app.html"]);
   const c = (await rpc("resources/read", { uri: "ui://maxey0/artifacts.html" })).result.contents[0];
   assert.equal(c.mimeType, "text/html;profile=mcp-app");
   assert.deepEqual(c._meta.ui.csp.resourceDomains, ["https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://unpkg.com", "https://cdn.tailwindcss.com", "https://fonts.googleapis.com", "https://fonts.gstatic.com"]);

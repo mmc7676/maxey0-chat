@@ -64,7 +64,41 @@ test("JSON responses declare UTF-8, and the server reports its release version",
   const h = await raw("/health", { method: "GET" });
   assert.equal(h.headers.get("content-type"), "application/json; charset=utf-8");
   assert.equal((await h.json()).server.title, "Maxey0 \u00b7 SCWs");
-  assert.equal(SERVER_INFO.version, "3.3.1");
+  assert.equal(SERVER_INFO.version, "0.3.0");
   const m = await raw(`/mcp/${KEY}`, { method: "POST", body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }) });
   assert.equal(m.headers.get("content-type"), "application/json; charset=utf-8");
+});
+
+test("Maxey0 app: resource carries the builder, the tile code and its CSP", async () => {
+  const { rpc } = mk();
+  const c = (await rpc("resources/read", { uri: "ui://maxey0/app.html" })).result.contents[0];
+  assert.equal(c.mimeType, "text/html;profile=mcp-app");
+  assert.ok(c._meta.ui.csp.resourceDomains.includes("https://cdn.jsdelivr.net"));
+  for (const s of ["window.Maxey0=", "parseWorkflow", "ui/message", "ui/open-link", "ui/request-display-mode", "maxey0_app_action", "artifact_get", "Maxey0 0.3.0"]) assert.ok(c.text.includes(s), s);
+  assert.ok(!/new Function\(/.test(c.text.split("window.Maxey0=")[1] ?? ""), "tile code runs without eval");
+});
+test("Maxey0 app: slots are validated, capped at 4, saved, and returned with the tray", async () => {
+  const { call } = mk();
+  for (const n of [1, 2, 3, 4, 5]) await call("artifact_upsert", { id: `a${n}`, title: `App ${n}`, kind: "html", code: `<p>${n}</p>` });
+  const bad = await call("maxey0_open_app", { slots: ["a1", "nope"] }); assert.equal(bad.isError, true); assert.match(bad.content[0].text, /No artifact with id nope/);
+  const many = await call("maxey0_open_app", { slots: ["a1", "a2", "a3", "a4", "a5"] }); assert.equal(many.isError, true);
+  const r = await call("maxey0_open_app", { slots: ["a3", "a1"], state: { input: "In scw1: draft" }, query: "App" });
+  assert.deepEqual(r.structuredContent.slots.map((a) => a.id), ["a3", "a1"]);
+  assert.deepEqual(r.structuredContent.builder, { input: "In scw1: draft" }); assert.equal(r.structuredContent.trayTotal, 5); assert.equal(r.structuredContent.slotMax, 4);
+  const again = await call("maxey0_open_app", {}); assert.deepEqual(again.structuredContent.slots.map((a) => a.id), ["a3", "a1"], "omitted slots keep the saved ones");
+  const set = await call("maxey0_app_action", { action: "slots.set", ids: ["a2", "a2", "gone"] }); assert.deepEqual(set.structuredContent.slots.map((a) => a.id), ["a2"]);
+});
+test("Maxey0 app: full-screen link serves one artifact version in a sandboxed page, then expires", async () => {
+  const { call, raw } = mk();
+  await call("artifact_upsert", { id: "pg", title: "Page <1>", kind: "html", code: "<h1 id='x'>Hello</h1>" });
+  const l = await call("maxey0_app_action", { action: "artifact.link", id: "pg" });
+  const path = new URL(l.structuredContent.url).pathname; assert.match(path, /^\/a\/[0-9a-f]{32}$/);
+  const ok = await raw(path, { method: "GET" }); assert.equal(ok.status, 200);
+  const csp = ok.headers.get("content-security-policy"); assert.match(csp, /^sandbox allow-scripts allow-popups allow-forms;/); assert.match(csp, /connect-src 'none'/);
+  const body = await ok.text(); assert.ok(body.includes("<h1 id='x'>Hello</h1>")); assert.ok(body.includes("<title>Page &lt;1&gt;</title>"));
+  assert.equal((await raw(path.replace("/a/", "/u/"), { method: "GET" })).status, 410, "an artifact link is not an upload link");
+  await call("artifact_upsert", { id: "pg", title: "Page <1>", kind: "html", code: "<h1>v2</h1>" });
+  assert.equal((await raw(path, { method: "GET" })).status, 410, "a link is for one version");
+  assert.equal((await raw("/a/0123456789abcdef0123456789abcdef", { method: "GET" })).status, 410);
+  const nope = await call("maxey0_app_action", { action: "artifact.link", id: "missing" }); assert.equal(nope.isError, true);
 });

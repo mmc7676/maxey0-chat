@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.0 (2026-10-16)
+One version for the plugin, the connector and the app, restarting at 0.3.0. Everything below this entry (1.0.0 to 3.3.1) is earlier work under the old numbering and is included here.
+- **Maxey0 app with artifact tiles (connector).** `/maxey0` now opens one view, served by the connector (`maxey0_open_app`, `ui://maxey0/app.html`), holding the workflow builder and an **Artifacts** section:
+  - an import tray of your stored artifacts with search;
+  - up to 4 tiles; place an artifact by dragging it onto a tile or by tapping it and then the tile, the same way agents go on steps;
+  - each tile can Expand, go Full screen inside Claude (the host's fullscreen mode, that tile only), Open outside ↗ (a 10-minute link that runs that one artifact version in a sandboxed page on the Worker), or be removed;
+  - the section collapses and expands without restarting tiles; placed tiles are saved and come back next time.
+  - Run sends `Maxey0: run …` to the chat (`ui/message`), as the widget did.
+- **Fallback:** without the connector, `/maxey0` draws the builder alone from `cdn.jsdelivr.net`, as before.
+- **Skill:** opens Maxey0 through the connector when it's there; places artifacts by id and says which it couldn't find instead of padding with guesses; says "opened", never "rendered", because a tool call can't see the screen.
+- **Connector:** new tools `maxey0_open_app` and app-only `maxey0_app_action` (`slots.set`, `artifact.link`); new route `GET /a/<ticket>` serves one artifact version with CSP `sandbox` (opaque origin), `connect-src 'none'`, `no-store`, and expires after 10 minutes or when the artifact changes.
+- **Includes 3.3.1's fix:** React tiles run without `unsafe-eval`, so they render under the MCP Apps CSP.
+- **Packaging:** one plugin (`dist/maxey0-plugin-v0.3.0.zip`, or Add marketplace `mmc7676/maxey0-chat`); the separate skill zip is no longer published.
+- Tests: connector 28; app in a browser under the spec CSP 11; artifacts board in a browser 10; plugin 26.
+
 ## 3.3.1 (2026-10-16), server only
 - **Fix: React artifacts did not render in Claude.** Tiles ran compiled code with `new Function`, which needs CSP `unsafe-eval`. MCP Apps hosts apply a CSP with `unsafe-inline` and without `unsafe-eval`, and a tile (a srcdoc frame) inherits it, so every React tile failed. Tiles now run the compiled code as an inline script. HTML, SVG and Mermaid tiles were not affected.
 - **Tests:** the browser test now serves the board with the CSP the MCP Apps spec tells hosts to build from `_meta.ui.csp` (`HOST_CSP=none` turns it off). Under that policy the 3.3.0 tile code passes 3 of 10 checks and this release passes 10 of 10. Rendering all 104 imported artifacts under the same policy gives 72 rendered, the same 72 as without a CSP, and no CSP-related errors; the other 32 fail on their own code (compile, syntax or export errors in versions rebuilt from chat history).

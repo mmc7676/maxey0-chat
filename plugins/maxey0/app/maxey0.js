@@ -138,6 +138,6 @@ $("run").addEventListener("click",()=>{const live=D.steps.filter(s=>(s.task||"")
 if(S&&S.input){$("txt").value=S.input;visualize(S.input)}
 draw();
 }
-window.Maxey0={version:"3.1.0",mount:mount,parseWorkflow:parseWorkflow,stagesOf:stagesOf};
+window.Maxey0={version:"0.3.0",mount:mount,parseWorkflow:parseWorkflow,stagesOf:stagesOf};
 mount(window.MAXEY0||{});
 })();
