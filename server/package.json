@@ -10,7 +10,8 @@
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.ui.json",
     "dev:node": "npm run build:test && node dev-node.mjs",
     "deploy": "wrangler deploy",
-    "build:ui": "node build-ui-artifacts.mjs"
+    "build:ui": "node build-ui-artifacts.mjs",
+    "test:browser": "npm run build:ui && npm run build:test && node test/ui.browser.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261006.1",

@@ -76,7 +76,8 @@ function onTileMessage(e: MessageEvent) {
   drawTileStatus(t);
   if (hostReady && t.reported !== t.meta.version && (t.state === "rendered" || t.state === "error")) {
     t.reported = t.meta.version;
-    callTool("artifact_report_render", { id: t.meta.id, version: t.meta.version, ok: t.state === "rendered", detail: t.detail }).catch(() => {});
+    callTool("artifact_report_render", { id: t.meta.id, version: t.meta.version, ok: t.state === "rendered", detail: t.detail })
+      .then((r) => { if (r.artifact && r.artifact.version === t.meta.version) { t.meta = r.artifact; renderCard(t); } }).catch(() => {});
   }
 }
 

@@ -23,12 +23,13 @@ export const RESOURCE_DOMAINS = ["https://cdn.jsdelivr.net", "https://cdnjs.clou
 const NPM = "https://cdn.jsdelivr.net/npm/";
 /** Libraries a React artifact may import, each pinned to a UMD build on jsDelivr and the global it defines.
  *  Paths verified to exist in the published npm packages. */
-export const LIBS: Record<string, { urls: string[]; global: string }> = {
+export const LIBS: Record<string, { urls: string[]; global: string; needsLowercaseReact?: boolean }> = {
   "react": { urls: [NPM + "react@18.3.1/umd/react.production.min.js"], global: "React" },
   "react-dom": { urls: [NPM + "react-dom@18.3.1/umd/react-dom.production.min.js"], global: "ReactDOM" },
   "react-dom/client": { urls: [NPM + "react-dom@18.3.1/umd/react-dom.production.min.js"], global: "ReactDOM" },
   "recharts": { urls: [NPM + "prop-types@15.8.1/prop-types.min.js", NPM + "recharts@2.12.7/umd/Recharts.js"], global: "Recharts" },
-  "lucide-react": { urls: [NPM + "lucide-react@0.383.0/dist/umd/lucide-react.min.js"], global: "LucideReact" },
+  // lucide-react's UMD reads React from the lowercase global `react` (its wrapper calls i(a.LucideReact={}, a.react)).
+  "lucide-react": { urls: [NPM + "lucide-react@0.383.0/dist/umd/lucide-react.min.js"], global: "LucideReact", needsLowercaseReact: true },
   "d3": { urls: [NPM + "d3@7.9.0/dist/d3.min.js"], global: "d3" },
   "three": { urls: [NPM + "three@0.149.0/build/three.min.js"], global: "THREE" },
   "lodash": { urls: [NPM + "lodash@4.17.21/lodash.min.js"], global: "_" },
@@ -133,9 +134,12 @@ mermaid.initialize({startOnLoad:false});mermaid.run({querySelector:".mermaid"}).
   if (kind === "react") {
     const needed = [...new Set(["react", "react-dom", ...importsOf(code).filter((m) => LIBS[m])])];
     const urls = [...new Set(needed.flatMap((m) => LIBS[m].urls))];
+    const reactUrl = LIBS.react.urls[0];
+    const alias = needed.some((m) => LIBS[m].needsLowercaseReact) ? `<script>window.react=window.React</script>` : "";
+    const scripts = urls.map((u) => `<script src="${u}"></script>${u === reactUrl ? alias : ""}`).join("");
     const globals: Record<string, string> = {};
     for (const m of Object.keys(LIBS)) globals[m] = LIBS[m].global;
-    return `${head}<script src="${TAILWIND_URL}"></script>${urls.map((u) => `<script src="${u}"></script>`).join("")}<script src="${BABEL_URL}"></script></head><body><div id="root"></div>
+    return `${head}<script src="${TAILWIND_URL}"></script>${scripts}<script src="${BABEL_URL}"></script></head><body><div id="root"></div>
 <script id="src" type="application/json">${jsonForScript(code)}</script>
 <script>(function(){var G=${jsonForScript(globals)},out;
 try{out=Babel.transform(JSON.parse(document.getElementById("src").textContent),{filename:"artifact.tsx",presets:["react",["typescript",{isTSX:true,allExtensions:true}]],plugins:["transform-modules-commonjs"]}).code}

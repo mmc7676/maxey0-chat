@@ -127,6 +127,13 @@ test("tile document: React loads only the libraries it imports, and code cannot 
   assert.ok(doc.includes('"hub#1"'));
 });
 
+test("tile document: lucide-react gets the lowercase react global it needs, right after React loads", async () => {
+  const doc = tileDocument("react", "import { Activity } from 'lucide-react';\nexport default () => null", "l#1");
+  const iReact = doc.indexOf("react@18.3.1/umd/react.production.min.js"), iAlias = doc.indexOf("window.react=window.React"), iLucide = doc.indexOf("lucide-react@0.383.0");
+  assert.ok(iReact > 0 && iReact < iAlias && iAlias < iLucide, "React, then alias, then lucide");
+  assert.equal(tileDocument("react", APP, "x#1").includes("window.react="), false, "no alias when nothing needs it");
+});
+
 test("tile document: HTML with a head gets the reporter injected; text kinds are escaped", async () => {
   const doc = tileDocument("html", "<html><head><title>t</title></head><body>x</body></html>", "w#1");
   assert.ok(doc.indexOf("__tileReport") < doc.indexOf("<title>"));
