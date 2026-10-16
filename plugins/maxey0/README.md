@@ -4,7 +4,8 @@ Set up **SCWs** (Structured Context Worlds: named containers for work), **agents
 
 ## Install
 
-- **Claude app, web and mobile (recommended):** upload [`dist/maxey0-skill-v3.2.0.zip`](https://github.com/mmc7676/maxey0-chat/raw/main/dist/maxey0-skill-v3.2.0.zip) in claude.ai under Customize > Skills. You then type **`/maxey0`** in any chat. Remove any older Maxey0 plugin first, so only one Maxey0 is installed.
+- **Claude app, web and mobile (recommended):** upload [`dist/maxey0-plugin-v3.2.0.zip`](https://github.com/mmc7676/maxey0-chat/raw/main/dist/maxey0-plugin-v3.2.0.zip) in claude.ai under Customize > Plugins > Add > Upload plugin, then type `/` in any chat and pick **maxey0**. Remove any older Maxey0 plugin and any standalone `maxey0` skill first, so only one Maxey0 is installed.
+- **Skill only:** [`dist/maxey0-skill-v3.2.0.zip`](https://github.com/mmc7676/maxey0-chat/raw/main/dist/maxey0-skill-v3.2.0.zip) under Customize > Skills.
 - **Claude Code:** `/plugin install maxey0 --marketplace mmc7676/maxey0-chat`, then `/maxey0:maxey0`.
 
 ## Use

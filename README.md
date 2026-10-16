@@ -13,11 +13,15 @@ An SCW (Structured Context World) is a named container for a piece of work: a de
 
 ## Install
 
-### Claude app (web and mobile): one skill, `/maxey0`
+### Claude app (web, desktop and mobile): the `maxey0` plugin
 
-1. Download [`dist/maxey0-skill-v3.2.0.zip`](https://github.com/mmc7676/maxey0-chat/raw/main/dist/maxey0-skill-v3.2.0.zip). Not GitHub's green **Code > Download ZIP**, which is the whole repository.
-2. On claude.ai, remove any older Maxey0 plugin (Customize > Plugins), then upload the zip under Customize > Skills.
-3. In any chat, on web or mobile, type **`/maxey0`**.
+1. Download [`dist/maxey0-plugin-v3.2.0.zip`](https://github.com/mmc7676/maxey0-chat/raw/main/dist/maxey0-plugin-v3.2.0.zip). Not GitHub's green **Code > Download ZIP**, which is the whole repository.
+2. On claude.ai, remove any older Maxey0 plugin (Customize > Plugins > open it > menu > **Remove**) and any standalone `maxey0` skill (Customize > Skills).
+3. Customize > Plugins > **Add** > **Upload plugin**, and select the zip.
+4. In any chat, on web or mobile, type `/` and pick **maxey0**.
+5. Optional, for artifacts and server-held SCWs: add the remote server below as a custom connector. The plugin does not bundle it yet (no `.mcp.json`), because the server's only credential is the key in its URL and plugin files must not carry secrets. It will be bundled once the server has OAuth.
+
+`dist/maxey0-skill-v3.2.0.zip` holds the same skill on its own, for accounts that use skills without plugins.
 
 ### Claude Code
 
