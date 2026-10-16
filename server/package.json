@@ -6,10 +6,11 @@
   "type": "module",
   "scripts": {
     "build:test": "esbuild test/entry.ts --bundle --format=esm --platform=node --outfile=build/node.mjs --log-level=warning",
-    "test": "npm run build:test && node --test test/server.test.mjs",
-    "typecheck": "tsc -p tsconfig.json",
+    "test": "npm run build:ui && npm run build:test && node --test test/server.test.mjs test/artifacts.test.mjs",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.ui.json",
     "dev:node": "npm run build:test && node dev-node.mjs",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "build:ui": "node build-ui-artifacts.mjs"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20261006.1",

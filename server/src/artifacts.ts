@@ -105,7 +105,7 @@ export function checkArtifact(kind: ArtifactKind, code: string): ArtifactCheck[]
   return checks;
 }
 
-const jsonForScript = (v: unknown) => JSON.stringify(v).replace(/</g, "\\u003c").replace(/ /g, "\\u2028").replace(/ /g, "\\u2029");
+const jsonForScript = (v: unknown) => JSON.stringify(v).replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
 /** Script every tile runs first: reports errors and a successful render to the dashboard by postMessage. */
