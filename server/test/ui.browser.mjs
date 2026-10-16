@@ -1,7 +1,7 @@
 // Browser run of the artifacts board (step 2). A test page plays Claude's role as the MCP Apps host:
 // it frames the board, answers ui/initialize, and forwards the board's tools/call requests to the
 // real server code. Chromium then opens real tiles.
-// Run: CDN_CACHE=<dir with npm/<pkg>@<ver>/...> PLAYWRIGHT=<path to playwright> node test/ui.browser.mjs
+// Run: CDN_CACHE=<dir with npm/<pkg>@<ver>/...> PLAYWRIGHT=<path to playwright> [HOST_CSP=none] node test/ui.browser.mjs
 // CDN requests are answered from CDN_CACHE, which holds the same npm package files jsDelivr serves.
 // cdn.tailwindcss.com is answered with an empty script, so Tailwind styling is not covered here.
 import http from "node:http"; import { readFileSync, existsSync } from "node:fs"; import { createRequire } from "node:module";
@@ -27,7 +27,15 @@ const fixtures = [
   { id: "flow", title: "Mermaid flow", kind: "mermaid", code: "graph TD; A-->B" },
 ];
 for (const f of fixtures) await call("artifact_upsert", f);
-const boardHtml = (await rpc("resources/read", { uri: "ui://maxey0/artifacts.html" })).contents[0].text;
+const boardRes = (await rpc("resources/read", { uri: "ui://maxey0/artifacts.html" })).contents[0];
+const boardHtml = boardRes.text;
+// By default the board is served with the CSP the MCP Apps spec tells hosts to build from the resource's _meta.ui.csp
+// (omitted fields are the spec's secure defaults: connect-src 'none', frame-src 'none'). Claude's exact
+// policy is not published; this is the spec's, so a pass here is necessary, not sufficient.
+const specCsp = (csp = {}) => { const r = (csp.resourceDomains || []).join(" "), f = (csp.frameDomains || []).join(" ") || "'none'", c = (csp.connectDomains || []).join(" ") || "'none'";
+  return `default-src 'none'; script-src 'self' 'unsafe-inline' ${r}; style-src 'self' 'unsafe-inline' ${r}; img-src 'self' data: blob: ${r}; font-src 'self' data: ${r}; media-src 'self' data: blob: ${r}; connect-src ${c}; frame-src ${f}; base-uri 'self'`; };
+const HOST_CSP = process.env.HOST_CSP === "none" ? "" : specCsp(boardRes._meta?.ui?.csp);
+if (HOST_CSP) console.log("host CSP: " + HOST_CSP);
 
 // ---- host page: the MCP Apps host side, minimal and faithful to the spec's message shapes
 const hostHtml = `<!doctype html><html><body style="margin:0"><iframe id="app" src="/board.html" style="width:1200px;height:2400px;border:0"></iframe>
@@ -43,7 +51,7 @@ window.addEventListener("message",async(e)=>{if(e.source!==app.contentWindow)ret
 
 const server = http.createServer(async (req, res) => {
   if (req.url === "/host.html") return res.writeHead(200, { "content-type": "text/html" }).end(hostHtml);
-  if (req.url === "/board.html") return res.writeHead(200, { "content-type": "text/html" }).end(boardHtml);
+  if (req.url === "/board.html") return res.writeHead(200, { "content-type": "text/html", ...(HOST_CSP ? { "content-security-policy": HOST_CSP } : {}) }).end(boardHtml);
   if (req.url === "/rpc") { let b = ""; for await (const c of req) b += c; const p = JSON.parse(b); return res.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(await call(p.name, p.arguments))); }
   res.writeHead(404).end();
 }).listen(0);

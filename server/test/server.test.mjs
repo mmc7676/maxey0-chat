@@ -64,7 +64,7 @@ test("JSON responses declare UTF-8, and the server reports its release version",
   const h = await raw("/health", { method: "GET" });
   assert.equal(h.headers.get("content-type"), "application/json; charset=utf-8");
   assert.equal((await h.json()).server.title, "Maxey0 \u00b7 SCWs");
-  assert.equal(SERVER_INFO.version, "3.3.0");
+  assert.equal(SERVER_INFO.version, "3.3.1");
   const m = await raw(`/mcp/${KEY}`, { method: "POST", body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }) });
   assert.equal(m.headers.get("content-type"), "application/json; charset=utf-8");
 });

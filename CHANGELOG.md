@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.3.1 (2026-10-16), server only
+- **Fix: React artifacts did not render in Claude.** Tiles ran compiled code with `new Function`, which needs CSP `unsafe-eval`. MCP Apps hosts apply a CSP with `unsafe-inline` and without `unsafe-eval`, and a tile (a srcdoc frame) inherits it, so every React tile failed. Tiles now run the compiled code as an inline script. HTML, SVG and Mermaid tiles were not affected.
+- **Tests:** the browser test now serves the board with the CSP the MCP Apps spec tells hosts to build from `_meta.ui.csp` (`HOST_CSP=none` turns it off). Under that policy the 3.3.0 tile code passes 3 of 10 checks and this release passes 10 of 10. Rendering all 104 imported artifacts under the same policy gives 72 rendered, the same 72 as without a CSP, and no CSP-related errors; the other 32 fail on their own code (compile, syntax or export errors in versions rebuilt from chat history).
+- The plugin is unchanged (still 3.3.0); only the server needs redeploying.
+
 ## 3.3.0 (2026-10-16)
 - **Effort on every input:** the skill applies an effort rule (new section 0) to every input it handles: `/maxey0`, typed workflows, dashboard **Run**, edits typed in chat, artifact requests. Each step is classed **mechanical** (a test, parse, count or tool check settles it: one pass) or **judgment** (nothing mechanical does: effort follows the cost of a wrong answer, with a checker that did not make the work). An explicit effort instruction wins. Runs show each step's class and report what checked it. Built in, so it works without the separate `/effort-optimizer` skill.
 - **Server:** the same rule is in the connector's instructions and is step 0 of every plan from `maxey0_get_plan`, so connector-only clients get it too. JSON responses now declare `charset=utf-8` (Windows PowerShell 5.1 showed `·` as `Â·`). The server reports version 3.3.0 instead of 1.0.0.

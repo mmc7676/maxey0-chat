@@ -145,7 +145,11 @@ mermaid.initialize({startOnLoad:false});mermaid.run({querySelector:".mermaid"}).
 try{out=Babel.transform(JSON.parse(document.getElementById("src").textContent),{filename:"artifact.tsx",presets:["react",["typescript",{isTSX:true,allExtensions:true}]],plugins:["transform-modules-commonjs"]}).code}
 catch(e){return window.__tileReport(false,"compile error: "+e.message)}
 var module={exports:{}};function req(n){if(!(n in G))throw new Error("cannot load module "+n);var g=window[G[n]];if(!g)throw new Error("library "+n+" did not load");return g}
-try{new Function("require","exports","module","React",out)(req,module.exports,module,window.React)}catch(e){return window.__tileReport(false,"runtime error: "+e.message)}
+// Run the compiled module as an inline <script>, not new Function: MCP Apps hosts apply a CSP with
+// 'unsafe-inline' but without 'unsafe-eval', and a srcdoc tile inherits that policy.
+window.__m0={req:req,module:module,err:null};var s=document.createElement("script");
+s.textContent="(function(require,exports,module,React){try{"+out+"\\n}catch(e){window.__m0.err=e}})(window.__m0.req,window.__m0.module.exports,window.__m0.module,window.React)";
+document.head.appendChild(s);if(window.__m0.err)return window.__tileReport(false,"runtime error: "+window.__m0.err.message);
 var C=module.exports.default||module.exports;if(typeof C!=="function"&&!(C&&C.$$typeof))return window.__tileReport(false,"no component exported");
 var Boundary=class extends React.Component{constructor(p){super(p);this.state={e:null}}static getDerivedStateFromError(e){return{e:e}}componentDidCatch(e){window.__tileReport(false,"render error: "+e.message)}render(){return this.state.e?React.createElement("pre",{style:{color:"#b91c1c",whiteSpace:"pre-wrap"}},String(this.state.e.message)):this.props.children}};
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(Boundary,null,React.createElement(C)));
