@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.3.0 (2026-10-16)
+- **Effort on every input:** the skill applies an effort rule (new section 0) to every input it handles: `/maxey0`, typed workflows, dashboard **Run**, edits typed in chat, artifact requests. Each step is classed **mechanical** (a test, parse, count or tool check settles it: one pass) or **judgment** (nothing mechanical does: effort follows the cost of a wrong answer, with a checker that did not make the work). An explicit effort instruction wins. Runs show each step's class and report what checked it. Built in, so it works without the separate `/effort-optimizer` skill.
+- **Server:** the same rule is in the connector's instructions and is step 0 of every plan from `maxey0_get_plan`, so connector-only clients get it too. JSON responses now declare `charset=utf-8` (Windows PowerShell 5.1 showed `·` as `Â·`). The server reports version 3.3.0 instead of 1.0.0.
+- Not in this release: `/maxey0` still draws the in-chat dashboard when the connector is connected; which dashboard it should open is undecided.
+- Tests: server 25; plugin 26.
+
 ## 3.2.0 (2026-10-16)
 - **Artifacts in the server:** artifact objects with mechanical checks (non-empty, size, loadable imports and a default export for React, allowed hosts for HTML), a tiles board as a second MCP Apps view (`ui://maxey0/artifacts.html`), and the tools `maxey0_open_artifacts`, `artifact_list`, `artifact_upsert`, plus app-only `artifact_get` and `artifact_report_render`. Tiles run side by side; opening one never restarts another.
 - **Import:** `server/scripts/import-index.mjs` loads an artifact index made from a claude.ai data export; re-runs update in place. Fixed: it did nothing on Windows, and `--dry-run` was read as the server URL.

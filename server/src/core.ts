@@ -5,7 +5,8 @@ import { DASHBOARD_HTML } from "./ui-html";
 import { ARTIFACTS_HTML } from "./artifacts-ui-html";
 import { ArtifactMeta, ArtifactKind, ARTIFACT_KINDS, RESOURCE_DOMAINS, checkArtifact, kindOf, sha256Hex } from "./artifacts";
 
-export const SERVER_INFO = { name: "maxey0", title: "Maxey0 · SCWs", version: "1.0.0" };
+export const EFFORT_RULE = "Effort on every input: classify each step by what would catch a wrong answer. Mechanical (a test, parse, count, exit code or tool check settles it): one pass, no second opinion. Judgment (nothing mechanical settles it): effort rises with the cost of a wrong answer; verify what is cheap to verify, and have a checker that did not make the work review it. An explicit effort instruction from the user wins. Report what was checked, and by what, separately from what was not.";
+export const SERVER_INFO = { name: "maxey0", title: "Maxey0 · SCWs", version: "3.3.0" };
 export const UI_URI = "ui://maxey0/dashboard.html";
 export const UI_MIME = "text/html;profile=mcp-app";
 export const ARTIFACTS_UI_URI = "ui://maxey0/artifacts.html";
@@ -177,6 +178,7 @@ export function expandPlan(w: Workspace, p: Plan) {
   const gates = w.gates.filter((g) => p.gateIds.includes(g.id) || p.scwIds.includes(g.scwId));
   const instructions = [
     `You are Maxey0, the orchestrator. Execute plan ${p.id}. Goal: ${p.goal || "(none given)"}.`,
+    `0. ${EFFORT_RULE} Pass this rule and each agent's effort class into its prompt.`,
     "1. For each declared agent, run a subagent (in Cowork or Claude Code, launch real subagents in parallel; in plain chat, run them one after another and label each section with the agent's name).",
     "2. Each agent may only use the SCWs in its scwIds. Every scw_read_file and scw_add_file made for an agent MUST pass asAgent=<agent name>; the server enforces scope and refuses anything else. A refusal is a result: report it, never route around it, and never paste one SCW's content into another agent's prompt.",
     "Regions: uploaded files are the read-only reference region; agent outputs go to the durable region. A checker agent must not grade its own output (maker/checker separation).",
@@ -407,7 +409,7 @@ export async function handleRpc(store: Store, wsId: string, baseUrl: string, msg
           protocolVersion: SUPPORTED_VERSIONS.includes(req) ? req : "2025-06-18",
           capabilities: { tools: { listChanged: false }, resources: { listChanged: false }, extensions: { "io.modelcontextprotocol/ui": {} } },
           serverInfo: SERVER_INFO,
-          instructions: "Maxey0 manages Structured Context Worlds (SCWs). Call maxey0_open_dashboard to show the interactive dashboard. When the user says 'Maxey0: execute plan <id>', call maxey0_get_plan and follow its instructions as the orchestrator.",
+          instructions: "Maxey0 manages Structured Context Worlds (SCWs). Call maxey0_open_dashboard to show the interactive dashboard. When the user says 'Maxey0: execute plan <id>', call maxey0_get_plan and follow its instructions as the orchestrator. " + EFFORT_RULE,
         });
       }
       case "ping": return rpcResult(id, {});
@@ -433,6 +435,7 @@ export async function handleRpc(store: Store, wsId: string, baseUrl: string, msg
   }
 }
 
+const JSON_UTF8 = { "Content-Type": "application/json; charset=utf-8" };
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "POST, GET, OPTIONS", "Access-Control-Allow-Headers": "content-type, mcp-protocol-version, mcp-session-id, authorization, accept", "Access-Control-Expose-Headers": "mcp-session-id" };
 
 /** Entry point. Routes: POST /mcp/<WORKSPACE_KEY> (MCP), GET|POST /u/<ticket> (upload page), GET / (health). */
@@ -452,7 +455,7 @@ export async function handleRequest(req: Request, store: Store, opts: { workspac
     const msgs = Array.isArray(body) ? body : [body];
     const out = (await Promise.all(msgs.map((m) => handleRpc(store, wsId, baseUrl, m)))).filter((x): x is Json => x !== null);
     if (!out.length) return new Response(null, { status: 202, headers: CORS });
-    return Response.json(Array.isArray(body) ? out : out[0], { headers: { ...CORS, "Content-Type": "application/json" } });
+    return Response.json(Array.isArray(body) ? out : out[0], { headers: { ...CORS, ...JSON_UTF8 } });
   }
 
   if (parts[0] === "u" && parts[1]) {
@@ -479,7 +482,7 @@ export async function handleRequest(req: Request, store: Store, opts: { workspac
     return new Response(uploadPage(null, scw.name), { headers: { "Content-Type": "text/html; charset=utf-8" } });
   }
 
-  if (url.pathname === "/" || url.pathname === "/health") return Response.json({ ok: true, server: SERVER_INFO });
+  if (url.pathname === "/" || url.pathname === "/health") return Response.json({ ok: true, server: SERVER_INFO }, { headers: JSON_UTF8 });
   return new Response("Not found", { status: 404 });
 }
 

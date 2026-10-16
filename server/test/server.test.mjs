@@ -1,7 +1,7 @@
 // Regression tests for the recovered Maxey0 MCP server (src/ recovered byte-exact from the deployed bundle's source map).
 // The original 47-test suite was not deployed and is not in this repository.
 import { test } from "node:test"; import assert from "node:assert/strict";
-import { handleRequest, KVStore, MemoryKV } from "../build/node.mjs";
+import { handleRequest, KVStore, MemoryKV, expandPlan, EFFORT_RULE, SERVER_INFO } from "../build/node.mjs";
 const KEY = "test-key-0123456789abcdef";
 const mk = () => { const store = new KVStore(new MemoryKV()); let id = 0;
   const raw = (path, init) => handleRequest(new Request("https://x.test" + path, init), store, { workspaceKey: KEY });
@@ -49,4 +49,22 @@ test("unknown tool and unknown method fail explicitly", async () => {
   const { rpc, call } = mk();
   assert.equal((await call("nope")).isError, true);
   assert.equal((await rpc("nope/method")).error.code, -32601);
+});
+
+test("effort on every input: initialize instructions and every plan carry the effort rule", async () => {
+  const { rpc } = mk();
+  assert.match(EFFORT_RULE, /Mechanical/); assert.match(EFFORT_RULE, /Judgment/); assert.match(EFFORT_RULE, /explicit effort instruction from the user wins/);
+  const r = (await rpc("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "t", version: "1" } })).result;
+  assert.ok(r.instructions.endsWith(EFFORT_RULE), "initialize instructions end with the effort rule");
+  const e = expandPlan({ scws: [], agents: [], loops: [], gates: [] }, { id: "p1", goal: "g", scwIds: [], agentIds: [], loopIds: [], gateIds: [] });
+  assert.ok(e.instructions[1].startsWith("0. " + EFFORT_RULE), "plan step 0 is the effort rule");
+});
+test("JSON responses declare UTF-8, and the server reports its release version", async () => {
+  const { raw } = mk();
+  const h = await raw("/health", { method: "GET" });
+  assert.equal(h.headers.get("content-type"), "application/json; charset=utf-8");
+  assert.equal((await h.json()).server.title, "Maxey0 \u00b7 SCWs");
+  assert.equal(SERVER_INFO.version, "3.3.0");
+  const m = await raw(`/mcp/${KEY}`, { method: "POST", body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }) });
+  assert.equal(m.headers.get("content-type"), "application/json; charset=utf-8");
 });
