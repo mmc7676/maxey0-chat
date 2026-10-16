@@ -24,7 +24,7 @@ function parseWorkflow(text) {
   function content(raw) {
     var t = raw.trim(); if (!t) return;
     var skills = [], m, re = /(^|\s)\/([a-z][\w:.-]*)/gi;
-    while ((m = re.exec(t))) skills.push(m[2]);
+    while ((m = re.exec(t))) skills.push(m[2].replace(/[.:]+$/, "")); // "/deep-research." ends a sentence; the dot is not part of the name
     var rest = t.replace(/(^|\s)\/(?=\s|$)/g, " ");
     var lead = rest.replace(/^(\s*\/[a-z][\w:.-]*)+/i, "").trim();
     var save = /save\s+(?:it\s+)?(?:in|to|into)\s+(?:#)?scw\s*(\d+)/i.exec(t);

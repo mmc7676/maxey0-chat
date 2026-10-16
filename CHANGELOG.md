@@ -13,7 +13,8 @@ One version for the plugin, the connector and the app, restarting at 0.3.0. Ever
 - **Connector:** new tools `maxey0_open_app` and app-only `maxey0_app_action` (`slots.set`, `artifact.link`); new route `GET /a/<ticket>` serves one artifact version with CSP `sandbox` (opaque origin), `connect-src 'none'`, `no-store`, and expires after 10 minutes or when the artifact changes.
 - **Includes 3.3.1's fix:** React tiles run without `unsafe-eval`, so they render under the MCP Apps CSP.
 - **Packaging:** one plugin (`dist/maxey0-plugin-v0.3.0.zip`, or Add marketplace `mmc7676/maxey0-chat`); the separate skill zip is no longer published.
-- Tests: connector 28; app in a browser under the spec CSP 11; artifacts board in a browser 10; plugin 26.
+- **Fix:** a skill written at the end of a sentence (`/deep-research.`) kept the period in its name; the parser drops it now.
+- Tests: connector 28; app in a browser under the spec CSP 11; artifacts board in a browser 10; plugin 27.
 
 ## 3.3.1 (2026-10-16), server only
 - **Fix: React artifacts did not render in Claude.** Tiles ran compiled code with `new Function`, which needs CSP `unsafe-eval`. MCP Apps hosts apply a CSP with `unsafe-inline` and without `unsafe-eval`, and a tile (a srcdoc frame) inherits it, so every React tile failed. Tiles now run the compiled code as an inline script. HTML, SVG and Mermaid tiles were not affected.

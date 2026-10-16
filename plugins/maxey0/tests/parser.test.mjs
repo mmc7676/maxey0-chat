@@ -61,3 +61,9 @@ test("without $pp, a block runs in order", () => {
 test("empty input yields no steps and only SCW0", () => {
   const q = parseWorkflow("   "); assert.equal(q.steps.length, 0); assert.equal(q.scws.length, 1);
 });
+
+test("a skill at the end of a sentence does not keep the period", () => {
+  const p = parseWorkflow("Launch SCW 5 in scw0\nIn scw5: research tiles /deep-research. Save to SCW5.");
+  const s = p.steps.find((x) => x.scw === "scw5");
+  assert.deepEqual(s.skills, ["deep-research"]); assert.equal(s.saveTo, "scw5");
+});
